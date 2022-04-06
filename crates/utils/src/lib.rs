@@ -2,9 +2,8 @@ use jwt_simple::prelude::*;
 
 pub mod apub;
 pub mod claims;
+pub mod config;
 pub mod pool;
-// pub mod rate_limit;
-pub mod settings;
 // pub mod utils;
 /// local user id
 pub type LocalUserId = usize;
