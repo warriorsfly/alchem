@@ -1,7 +1,14 @@
-use axum::{async_trait, extract::{FromRequest, RequestParts}, http::StatusCode, Extension};
-use diesel::{r2d2::{Pool, ConnectionManager, PooledConnection}, PgConnection};
+use axum::{
+    async_trait,
+    extract::{FromRequest, RequestParts},
+    http::StatusCode,
+    Extension,
+};
+use diesel::{
+    r2d2::{ConnectionManager, Pool, PooledConnection},
+    PgConnection,
+};
 use tracing::error;
-
 
 // #[cfg(feature = "postgres")]
 pub type DbPool = Pool<ConnectionManager<PgConnection>>;
@@ -25,13 +32,21 @@ where
             move || {
                 pool.get().map_err(|e| {
                     error!("Failed to get connection from pool: {}", e);
-                    (StatusCode::INTERNAL_SERVER_ERROR, "Failed to get connection from pool".into())
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Failed to get connection from pool: {}", e),
+                    )
                 })
             }
-        }).await.map_err(|e| {
-                    error!("Failed to join task to runtime: {}", e);
-                    (StatusCode::INTERNAL_SERVER_ERROR, "Failed to join task to runtime".into())
-                })??;
+        })
+        .await
+        .map_err(|e| {
+            error!("Failed to join task to runtime: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to join task to runtime".into(),
+            )
+        })??;
 
         Ok(Self(conn))
     }
@@ -43,4 +58,3 @@ where
 {
     (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
-
