@@ -1,5 +1,4 @@
-use crate::{settings::structs::RateLimitConfig, utils::get_ip, IpAddr, DoubleZeroError};
-use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use crate::{settings::structs::RateLimitConfig, utils::get_ip, IpAddr};
 use futures::future::{ok, Ready};
 use rate_limiter::{RateLimitType, RateLimiter};
 use std::{

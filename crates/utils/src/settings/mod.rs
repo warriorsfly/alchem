@@ -1,8 +1,7 @@
-use crate::{location_info, settings::structs::Settings, DoubleZeroError};
+use crate::settings::structs::Settings;
 use anyhow::{anyhow, Context};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
-use serde_json::from_str;
 use std::{env, fs, io::Error, sync::RwLock};
 
 pub mod structs;
