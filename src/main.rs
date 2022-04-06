@@ -1,19 +1,19 @@
 #[macro_use]
 extern crate diesel;
 
-use alchem_websocket::AppState;
+use alchem_utils::AppState;
 use axum::{
     async_trait,
-    extract::{ FromRequest, RequestParts},
+    extract::{FromRequest, RequestParts},
     http::StatusCode,
     routing::get,
-     Router, Extension,
+    Extension, Router,
 };
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     PgConnection,
 };
-use std::{env, net::SocketAddr, time::Duration, sync::Arc};
+use std::{env, net::SocketAddr, sync::Arc, time::Duration};
 
 #[tokio::main]
 async fn main() {

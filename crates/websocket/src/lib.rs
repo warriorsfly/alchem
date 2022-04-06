@@ -5,39 +5,59 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         TypedHeader,
     },
-    http::StatusCode,
-    response::IntoResponse,
-    routing::{get, get_service},
-    Router,
+    response::IntoResponse, headers,
 };
-use futures::stream::SplitSink;
-use std::net::SocketAddr;
-// use tower_http::{
-//     services::ServeDir,
-//     trace::{DefaultMakeSpan, TraceLayer},
-// };
 
-pub type ConnectionId = usize;
-pub type UserId = usize;
-pub type RoomId = usize;
-#[derive(PartialEq, Eq, Hash, Debug)]
-pub struct IpAddr(pub String);
 
-pub struct WsSession {
-    // pub socket: WebSocket,
-    pub ip: IpAddr,
-    pub communiity_rooms: Option<HashSet<RoomId>>,
+
+
+async fn ws_handler(
+    ws: WebSocketUpgrade,
+    user_agent: Option<TypedHeader<headers::UserAgent>>,
+) -> impl IntoResponse {
+    if let Some(TypedHeader(user_agent)) = user_agent {
+        println!("`{}` connected", user_agent.as_str());
+    }
+
+    ws.on_upgrade(handle_socket)
 }
 
-pub struct AppState {
-    redis: redis::cluster::ClusterClient,
-}
-
-impl AppState {
-    pub fn new(redis_urls: Vec<&str>) -> Self {
-        Self {
-            redis: redis::cluster::ClusterClient::open(redis_urls).unwrap(),
+async fn handle_socket(mut socket: WebSocket) {
+    if let Some(msg) = socket.recv().await {
+        if let Ok(msg) = msg {
+            match msg {
+                Message::Text(t) => {
+                    println!("client send str: {:?}", t);
+                }
+                Message::Binary(_) => {
+                    println!("client send binary data");
+                }
+                Message::Ping(_) => {
+                    println!("socket ping");
+                }
+                Message::Pong(_) => {
+                    println!("socket pong");
+                }
+                Message::Close(_) => {
+                    println!("client disconnected");
+                    return;
+                }
+            }
+        } else {
+            println!("client disconnected");
+            return;
         }
     }
-}
 
+    loop {
+        if socket
+            .send(Message::Text(String::from("Hi!")))
+            .await
+            .is_err()
+        {
+            println!("client disconnected");
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+    }
+}
