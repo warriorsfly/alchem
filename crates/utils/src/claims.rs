@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct AdditionalData {
-   id: i32,
+pub struct Armor {
+    pub id: i32,
 }
