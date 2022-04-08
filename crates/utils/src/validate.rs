@@ -1,6 +1,5 @@
 use axum::{
     async_trait,
-    body::Body,
     extract::{Form, FromRequest, RequestParts},
     BoxError, Json,
 };

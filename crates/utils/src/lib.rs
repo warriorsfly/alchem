@@ -1,10 +1,6 @@
 use axum::{
-    async_trait,
-    extract::{Extension, Path},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
-    Json, Router,
 };
 use diesel::{
     r2d2::PoolError,

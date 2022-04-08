@@ -1,7 +1,6 @@
 use axum::{
     async_trait,
     extract::{FromRequest, RequestParts},
-    http::StatusCode,
     Extension,
 };
 use diesel::{
@@ -15,8 +14,8 @@ use crate::Error;
 // #[cfg(feature = "postgres")]
 pub type DbPool = Pool<ConnectionManager<PgConnection>>;
 // #[cfg(feature = "postgres")]
-pub type Connection = PooledConnection<ConnectionManager<PgConnection>>;
-pub struct DatabaseConnection(pub Connection);
+pub type DbConnection = PooledConnection<ConnectionManager<PgConnection>>;
+pub struct DatabaseConnection(pub DbConnection);
 
 #[async_trait]
 impl<B> FromRequest<B> for DatabaseConnection

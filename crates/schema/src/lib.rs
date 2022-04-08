@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate diesel;
 
-pub mod repository;
+pub mod repo;
 pub mod source;
 mod schema;

@@ -1,4 +1,4 @@
-use alchem_schema::{repository, source::User};
+use alchem_schema::{repo, source::User};
 use alchem_utils::{pool::DatabaseConnection, validate::ValidatableJson, Error};
 
 use axum::Json;
@@ -38,10 +38,10 @@ pub struct UserToken {
 }
 
 pub(crate) async fn signup(
-    dbc: DatabaseConnection,
+    DatabaseConnection(mut dbc): DatabaseConnection,
     ValidatableJson(entity): ValidatableJson<UserForm>,
 ) -> Result<Json<User>, Error> {
-    let usr = repository::signup(dbc, &entity.name, &entity.password)?;
+    let usr = repo::signup(&mut dbc, &entity.name, &entity.password)?;
 
     Ok(Json(usr))
 }

@@ -16,7 +16,7 @@ pub struct Config {
 
 impl Config {
     pub fn get_rsa(&self) -> RS384KeyPair {
-         let mut rsa_file = File::open(&self.jwt_rsa).expect(format!("failed to load private key file:{}",&self.jwt_rsa).as_str());
+         let mut rsa_file = File::open(&self.jwt_rsa).unwrap_or_else(|_| panic!("failed to load private key file:{}",&self.jwt_rsa));
          let mut contents = String::new();
          rsa_file.read_to_string(&mut contents).unwrap();
          RS384KeyPair::from_pem(contents.as_str()).expect("failed to load private key")

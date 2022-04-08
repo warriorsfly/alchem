@@ -1,4 +1,4 @@
-use alchem_utils::{config::CONFIG, pool::init_pool, WsServer};
+use alchem_utils::{config::CONFIG, pool::init_pool};
 use axum::{routing::post, Extension, Router};
 
 use std::net::SocketAddr;
@@ -11,7 +11,7 @@ mod handlers;
 async fn main() {
     tracing_subscriber::fmt::init();
     // setup connection pool
-    let redis_urls: Vec<&str> = CONFIG.redis_urls.split(',').collect();
+    // let redis_urls: Vec<&str> = CONFIG.redis_urls.split(',').collect();
 
     let pool = init_pool(&CONFIG.database_url);
 
