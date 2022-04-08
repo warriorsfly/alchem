@@ -1,7 +1,8 @@
 use alchem_schema::{repo, source::User};
-use alchem_utils::{pool::DatabaseConnection, validate::ValidatableJson, Error};
+use alchem_utils::{claims::Armor, pool::DatabaseConnection, validate::ValidatableJson, Error, config::CONFIG};
 
-use axum::Json;
+use axum::{Json, Extension};
+use jwt_simple::prelude::*;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -37,7 +38,7 @@ pub struct UserToken {
     pub account: User,
 }
 
-pub(crate) async fn signup(
+pub(crate) async fn signup_handler(
     DatabaseConnection(mut dbc): DatabaseConnection,
     ValidatableJson(entity): ValidatableJson<UserForm>,
 ) -> Result<Json<User>, Error> {
@@ -45,17 +46,17 @@ pub(crate) async fn signup(
 
     Ok(Json(usr))
 }
-// pub async fn login(
-//     system: Data<DoubleZeroSystem>,
-//     entity: Json<LoginForm>,
-// ) -> Result<Json<UserToken>, AlchemError> {
-//     validate(&entity)?;
-//     let ur =
-//         block(move || repository::login(&system.pool, &entity.name, &entity.password)).await??;
-//     let claims = Claims::new(ur.id);
-//     let res = UserToken {
-//         token: create_jwt(claims)?,
-//         account: ur,
-//     };
-//     respond_json(res)
-// }
+pub(crate) async fn login_handler(
+    DatabaseConnection(mut dbc): DatabaseConnection,
+    Extension(key_pair): Extension::<RS384KeyPair>,
+    ValidatableJson(entity): ValidatableJson<UserForm>,
+) -> Result<Json<UserToken>, Error> {
+    let usr = repo::login(&mut dbc, &entity.name, &entity.password)?;
+    let armor = Armor { id: usr.id };
+    let claims = Claims::with_custom_claims(armor, Duration::from_secs(CONFIG.jwt_expire_seconds));
+    let token = key_pair.sign(claims).map_err(|e| Error::InternalServerError(e.to_string()))?;
+    Ok(Json(UserToken{
+        token,
+        account: usr,
+    }))
+}
