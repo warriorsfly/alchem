@@ -6,8 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace]
 members = [
-    "crates/bors",
+    # "crates/bors",
     "crates/todos",
+    "crates/schema",
     "crates/utils",
     "crates/websocket",
 ]
@@ -19,6 +20,7 @@ alchem-websocket = { version = "0.1.0",path = "./crates/websocket"}
 diesel = {git = "https://github.com/diesel-rs/diesel", features = ["chrono", "postgres","r2d2"]}
 axum = { version = "0.5", features = ["ws", "headers"] }
 futures = "0.3"
+jwt-simple = "0.10"
 tokio = "1"
 tower = { version = "0.4", features = ["util"] }
 tracing = "0.1"
