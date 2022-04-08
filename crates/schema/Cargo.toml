@@ -10,3 +10,6 @@ alchem-utils = { version = "0.1", path = "../utils" }
 chrono = { version = "0.4", features = ["serde"] }
 diesel = {git = "https://github.com/diesel-rs/diesel", features = ["chrono", "postgres","r2d2", "serde_json"]}
 serde = { version = "1", features = ["derive"] }
+# tokio = { version = "1", features = ["full"] }
+# tracing = "0.1"
+# tracing-subscriber = { version="0.3", features = ["env-filter"] }

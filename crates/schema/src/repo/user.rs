@@ -5,6 +5,7 @@ use alchem_utils::{
     Error,
 };
 use diesel::{dsl::*, prelude::*};
+
 pub fn signup<'a>(
     conn: &'a mut DbConnection,
     username: &'a str,

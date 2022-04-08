@@ -1,9 +1,13 @@
 use alchem_utils::{config::CONFIG, pool::init_pool};
-use axum::{routing::post, Extension, Router};
+use alchem_websocket::ws_handler;
+use axum::{
+    routing::{get, post},
+    Extension, Router,
+};
 
 use std::net::SocketAddr;
 
-use crate::handlers::signup;
+use crate::handlers::{signup_handler, login_handler};
 
 mod handlers;
 
@@ -21,7 +25,9 @@ async fn main() {
         .layer(Extension(pool))
         // .layer(Extension(websocket_server))
         .layer(Extension(key_pair))
-        .route("/api/signup", post(signup));
+        .route("/api/signup", post(signup_handler))
+        .route("/api/login", post(login_handler))
+        .route("/ws", get(ws_handler));
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
