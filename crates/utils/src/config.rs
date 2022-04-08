@@ -11,7 +11,7 @@ pub struct Config {
     pub redis_urls: String,
     pub server: String,
     pub jwt_rsa: String,
-    pub jwt_expiration: i64,
+    pub jwt_expire_seconds: u64,
 }
 
 impl Config {
