@@ -1,0 +1,34 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:alpine
+    container_name: alchem
+    environment:
+      - POSTGRES_USER=allen
+      - POSTGRES_PASSWORD=zhang
+      - POSTGRES_DB=alchem
+    ports:
+      - "5432:5432"
+    volumes:
+      - database_data:/var/lib/postgres/data
+      # - ./migrations/00000000000000_diesel_initial_setup/up.sql:/docker-entrypoint-initdb.d/00000000000000_diesel_initial_setup.sql
+      # - ./migrations/2021-06-05-091545_create_users/up.sql:/docker-entrypoint-initdb.d/2021-06-05-091545_create_users.sql
+      # - ./migrations/2021-06-05-091547_create_books/up.sql:/docker-entrypoint-initdb.d/2021-06-05-091547_create_books.sql
+
+
+    restart: always
+  # redis:
+  #   image: redis:alpine
+  #   container_name: redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/var/lib/redis/data
+  #   restart: always
+  # 后面要补上 flutter前端
+  # application:
+volumes:
+  database_data:
+    driver: local
+  # redis_data:
+  #   driver: local
