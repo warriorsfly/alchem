@@ -11,12 +11,10 @@ tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
-anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
-comrak = { version = "0.12", default-features = false }
+data-encoding = "2"
 diesel = {git = "https://github.com/diesel-rs/diesel", features = ["chrono", "postgres","r2d2", "serde_json"]}
-dotenv="0.15"
-encoding = "0.2"
+dotenvy="0.15"
 envy = "0.4"
 jwt-simple = "0.10"
 futures = "0.3"
@@ -26,6 +24,7 @@ openssl = "0.10"
 percent-encoding = "2"
 rand = "0.8"
 redis = {version = "0.21", features = ["cluster","tokio-comp"]}
+ring = "0.17.0-alpha.11"
 serde = { version = "1", features = ["derive"] }
 thiserror = "1"
 validator = { version = "0.14.0", features = ["derive"] }
