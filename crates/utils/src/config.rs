@@ -1,4 +1,4 @@
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
@@ -7,7 +7,7 @@ pub struct Config {
     pub database_url: String,
     pub redis_url: String,
     pub server: String,
-    pub private_key_path: String,
+    pub rsa_private_key: String,
     pub jwt_expiration: i64,
 }
 
