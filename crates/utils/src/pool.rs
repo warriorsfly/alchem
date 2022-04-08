@@ -14,7 +14,7 @@ use tracing::error;
 pub type DbPool = Pool<ConnectionManager<PgConnection>>;
 // #[cfg(feature = "postgres")]
 pub type Connection = PooledConnection<ConnectionManager<PgConnection>>;
-pub struct DatabaseConnection(Connection);
+pub struct DatabaseConnection(pub Connection);
 
 #[async_trait]
 impl<B> FromRequest<B> for DatabaseConnection
@@ -57,4 +57,9 @@ where
     E: std::error::Error,
 {
     (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+}
+
+pub fn init_pool(database_url:&str) -> DbPool {
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    Pool::builder().build(manager).expect("database_url error")
 }
