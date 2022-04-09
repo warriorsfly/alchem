@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use alchem_schema::{repo, source::User};
 use alchem_utils::{
-    claims::Armor, config::CONFIG, db::DatabaseConnection, validate::ValidatedJson, Error,
+    claims::Armor, config::{CONFIG, KEY_PAIR}, db::DatabaseConnection, validate::ValidatedJson, Error,
 };
 
 use axum::{Extension, Json};
@@ -33,6 +33,7 @@ pub struct PatchUserForm {
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub struct LoginForm {
     pub name: String,
+    #[validate(length(min = 4))]
     pub password: String,
 }
 
@@ -57,8 +58,7 @@ pub(crate) async fn signup_handler(
 }
 pub(crate) async fn login_handler(
     DatabaseConnection(mut conn): DatabaseConnection,
-    Extension(key_pair): Extension<Arc<RS384KeyPair>>,
-    ValidatedJson(entity): ValidatedJson<UserForm>,
+    ValidatedJson(entity): ValidatedJson<LoginForm>,
 ) -> Result<Json<UserToken>, Error> {
     let usr = repo::login(
         &mut conn,
@@ -68,7 +68,7 @@ pub(crate) async fn login_handler(
     .await?;
     let armor = Armor { id: usr.id };
     let claims = Claims::with_custom_claims(armor, Duration::from_secs(CONFIG.jwt_expire_seconds));
-    let token = key_pair
+    let token = KEY_PAIR
         .sign(claims)
         .map_err(|e| Error::InternalServerError(e.to_string()))?;
     Ok(Json(UserToken {

@@ -29,4 +29,4 @@ tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
-validator = { version = "0.14.0", features = ["derive"] }
+validator = { version = "0.14.0", features = ["derive","phone"] }

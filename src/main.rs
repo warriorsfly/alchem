@@ -18,7 +18,7 @@ async fn main() {
     // build our application with some routes
     let app = Router::new()
         .route("/api/user/signup", post(signup_handler))
-        .route("/api/login", post(login_handler))
+        .route("/api/user/login", post(login_handler))
         .route("/ws", get(ws_handler));
 
     // run it with hyper

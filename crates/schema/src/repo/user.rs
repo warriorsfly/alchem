@@ -69,9 +69,9 @@ pub async fn login(
                 .await?;
 
             verify_password(
-                &local_user.password_encrypted,
                 psw.as_str(),
-                local_user.salt.as_bytes(),
+                &local_user.salt,
+                local_user.password_encrypted.as_bytes(),
             )
             .map_err(|e| Error::InternalServerError(e.to_string()))?;
 
