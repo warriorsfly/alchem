@@ -4,18 +4,18 @@ use axum::{
     BoxError, Json,
 };
 use serde::de::DeserializeOwned;
-use validator::{Validate, ValidationErrors};
+use validator::Validate;
 
 use crate::Error;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct ValidatableForm<T>(pub T);
+pub struct ValidatedForm<T>(pub T);
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct ValidatableJson<T>(pub T);
+pub struct ValidatedJson<T>(pub T);
 
 #[async_trait]
-impl<T, B> FromRequest<B> for ValidatableForm<T>
+impl<T, B> FromRequest<B> for ValidatedForm<T>
 where
     T: DeserializeOwned + Validate,
     B: http_body::Body + Send,
@@ -30,13 +30,13 @@ where
             .map_err(|e| Error::BadRequest(e.to_string()))?;
         value
             .validate()
-            .map_err(|e| Error::ValidateError(collect_errors(e)))?;
-        Ok(ValidatableForm(value))
+            .map_err(|e| Error::ValidateError(e.to_string()))?;
+        Ok(ValidatedForm(value))
     }
 }
 
 #[async_trait]
-impl<T, B> FromRequest<B> for ValidatableJson<T>
+impl<T, B> FromRequest<B> for ValidatedJson<T>
 where
     T: DeserializeOwned + Validate,
     B: http_body::Body + Send,
@@ -51,22 +51,7 @@ where
             .map_err(|e| Error::BadRequest(e.to_string()))?;
         value
             .validate()
-            .map_err(|e| Error::ValidateError(collect_errors(e)))?;
-        Ok(ValidatableJson(value))
+            .map_err(|e| Error::ValidateError(e.to_string()))?;
+        Ok(ValidatedJson(value))
     }
-}
-
-fn collect_errors(error: ValidationErrors) -> Vec<String> {
-    error
-        .field_errors()
-        .into_iter()
-        .map(|e| {
-            let default_error = format!("{} is required", e.0);
-            e.1[0]
-                .message
-                .as_ref()
-                .unwrap_or(&std::borrow::Cow::Owned(default_error))
-                .to_string()
-        })
-        .collect()
 }

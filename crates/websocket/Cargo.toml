@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.5", features = ["ws", "headers"] }
 futures = "0.3"
-
+redis = {version = "0.21", features = ["cluster","tokio-comp"]}
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util"] }
 tracing = "0.1"
