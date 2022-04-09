@@ -1,11 +1,13 @@
-use std::sync::Arc;
-
 use alchem_schema::{repo, source::User};
 use alchem_utils::{
-    claims::Armor, config::{CONFIG, KEY_PAIR}, db::DatabaseConnection, validate::ValidatedJson, Error,
+    claims::Armor,
+    config::{CONFIG, KEY_PAIR},
+    db::DatabaseConnection,
+    validate::ValidatedJson,
+    Error,
 };
 
-use axum::{Extension, Json};
+use axum::Json;
 use jwt_simple::prelude::*;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
