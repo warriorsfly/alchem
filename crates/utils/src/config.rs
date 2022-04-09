@@ -14,17 +14,9 @@ pub struct Config {
     pub jwt_expire_seconds: u64,
 }
 
-impl Config {
-    pub fn get_rsa(&self) -> RS384KeyPair {
-         let mut rsa_file = File::open(&self.jwt_rsa).unwrap_or_else(|_| panic!("failed to load private key file:{}",&self.jwt_rsa));
-         let mut contents = String::new();
-         rsa_file.read_to_string(&mut contents).unwrap();
-         RS384KeyPair::from_pem(contents.as_str()).expect("failed to load private key")
-    }
-}
-
 lazy_static! {
     pub static ref CONFIG: Config = get_config();
+    pub static ref KEY_PAIR: RS384KeyPair = get_rsa(CONFIG.jwt_rsa.as_str());
 }
 
 fn get_config() -> Config {
@@ -34,6 +26,13 @@ fn get_config() -> Config {
         Err(error) => panic!("Configuration Error:{:#?}", error),
     }
 }
+
+fn get_rsa(path:&str) -> RS384KeyPair {
+         let mut rsa_file = File::open(path).unwrap_or_else(|_| panic!("failed to load private key file:{}",path));
+         let mut contents = String::new();
+         rsa_file.read_to_string(&mut contents).unwrap();
+         RS384KeyPair::from_pem(contents.as_str()).expect("failed to load private key")
+    }
 
 #[cfg(test)]
 mod tests {

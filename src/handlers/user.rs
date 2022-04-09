@@ -1,7 +1,11 @@
-use alchem_schema::{repo, source::User};
-use alchem_utils::{claims::Armor, pool::DatabaseConnection, validate::ValidatableJson, Error, config::CONFIG};
+use std::sync::Arc;
 
-use axum::{Json, Extension};
+use alchem_schema::{repo, source::User};
+use alchem_utils::{
+    claims::Armor, config::CONFIG, db::DatabaseConnection, validate::ValidatedJson, Error,
+};
+
+use axum::{Extension, Json};
 use jwt_simple::prelude::*;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -39,23 +43,35 @@ pub struct UserToken {
 }
 
 pub(crate) async fn signup_handler(
-    DatabaseConnection(mut dbc): DatabaseConnection,
-    ValidatableJson(entity): ValidatableJson<UserForm>,
+    DatabaseConnection(mut conn): DatabaseConnection,
+    ValidatedJson(entity): ValidatedJson<UserForm>,
 ) -> Result<Json<User>, Error> {
-    let usr = repo::signup(&mut dbc, &entity.name, &entity.password)?;
+    let usr = repo::signup(
+        &mut conn,
+        entity.name.to_owned(),
+        entity.password.to_owned(),
+    )
+    .await?;
 
     Ok(Json(usr))
 }
 pub(crate) async fn login_handler(
-    DatabaseConnection(mut dbc): DatabaseConnection,
-    Extension(key_pair): Extension::<RS384KeyPair>,
-    ValidatableJson(entity): ValidatableJson<UserForm>,
+    DatabaseConnection(mut conn): DatabaseConnection,
+    Extension(key_pair): Extension<Arc<RS384KeyPair>>,
+    ValidatedJson(entity): ValidatedJson<UserForm>,
 ) -> Result<Json<UserToken>, Error> {
-    let usr = repo::login(&mut dbc, &entity.name, &entity.password)?;
+    let usr = repo::login(
+        &mut conn,
+        entity.name.to_owned(),
+        entity.password.to_owned(),
+    )
+    .await?;
     let armor = Armor { id: usr.id };
     let claims = Claims::with_custom_claims(armor, Duration::from_secs(CONFIG.jwt_expire_seconds));
-    let token = key_pair.sign(claims).map_err(|e| Error::InternalServerError(e.to_string()))?;
-    Ok(Json(UserToken{
+    let token = key_pair
+        .sign(claims)
+        .map_err(|e| Error::InternalServerError(e.to_string()))?;
+    Ok(Json(UserToken {
         token,
         account: usr,
     }))

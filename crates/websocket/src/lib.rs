@@ -10,6 +10,28 @@ use axum::{
 
 
 
+// pub mod utils;
+/// local user id
+pub type LocalUserId = usize;
+/// websocket connection id
+pub type ConnectionId = usize;
+/// room id
+pub type RoomId = usize;
+
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub struct IpAddr(pub String);
+
+pub struct WsServer {
+    redis_cluster: redis::cluster::ClusterClient,
+}
+
+impl WsServer {
+    pub fn new(redis_urls: Vec<&str>) -> Self {
+        Self {
+            redis_cluster: redis::cluster::ClusterClient::open(redis_urls).unwrap(),
+        }
+    }
+}
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
