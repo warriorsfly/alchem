@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::schema::users;
-#[derive(Clone, Queryable, Serialize, Deserialize,Debug)]
+#[derive(Clone, Queryable, Serialize, Deserialize, Debug)]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: i32,

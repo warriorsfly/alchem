@@ -3,12 +3,11 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-
 pub mod apub;
 pub mod claims;
 pub mod config;
-pub mod encryption;
 pub mod db;
+pub mod encryption;
 pub mod validate;
 
 #[derive(Debug)]
@@ -42,4 +41,3 @@ impl IntoResponse for Error {
         (status, error_message).into_response()
     }
 }
-

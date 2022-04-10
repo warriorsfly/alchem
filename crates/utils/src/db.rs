@@ -9,12 +9,6 @@ use crate::{config::CONFIG, Error};
 pub type DieselConnection = diesel_async::AsyncPgConnection;
 pub struct DatabaseConnection(pub DieselConnection);
 
-// pub async fn establish_connection(database_url: &str) -> DbConnection {
-//     AsyncDbConnection::establish(database_url)
-//         .await
-//         .expect("Error connecting to database")
-// }
-
 #[async_trait]
 impl<B> FromRequest<B> for DatabaseConnection
 where

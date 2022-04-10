@@ -1,16 +1,16 @@
+use std::sync::Arc;
 
-
+use alchem_utils::config::CONFIG;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         TypedHeader,
     },
-    response::IntoResponse, headers,
+    headers,
+    response::IntoResponse,
+    Extension,
 };
 
-
-
-// pub mod utils;
 /// local user id
 pub type LocalUserId = usize;
 /// websocket connection id
@@ -21,25 +21,58 @@ pub type RoomId = usize;
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct IpAddr(pub String);
 
-pub struct WsServer {
-    redis_cluster: redis::cluster::ClusterClient,
+pub struct Application {
+    pub redis_client: redis::Client,
 }
 
-impl WsServer {
-    pub fn new(redis_urls: Vec<&str>) -> Self {
+impl Application {
+    pub fn new() -> Self {
         Self {
-            redis_cluster: redis::cluster::ClusterClient::open(redis_urls).unwrap(),
+            redis_client: redis::Client::open(CONFIG.redis_url.as_ref()).unwrap(),
         }
     }
 }
 
+// pub type AioConnection = redis::aio::MultiplexedConnection;
+// pub struct RedisConnection(pub AioConnection);
+
+// #[async_trait]
+// impl<B> FromRequest<B> for RedisConnection
+// where
+//     B: Send,
+// {
+//     type Rejection = Error;
+
+//     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
+//         let Extension(app) = Extension::<Application>::from_request(req)
+//             .await
+//             .map_err(|e| Error::InternalServerError(e.to_string()))?;
+
+//         let conn = app
+//             .redis_client
+//             .get_multiplexed_tokio_connection()
+//             .await
+//             .map_err(|e| Error::InternalServerError(e.to_string()))?;
+
+//         Ok(Self(conn))
+//     }
+// }
+
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
+    Extension(app): Extension<Arc<Application>>,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
 ) -> impl IntoResponse {
     if let Some(TypedHeader(user_agent)) = user_agent {
         println!("`{}` connected", user_agent.as_str());
     }
+    let cn = app
+        .redis_client
+        .get_multiplexed_tokio_connection()
+        .await
+        .unwrap();
+
+    // cn.hset("all".to_string(), "all".to_string(), "all".to_string());
 
     ws.on_upgrade(handle_socket)
 }

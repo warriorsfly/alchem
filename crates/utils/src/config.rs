@@ -8,7 +8,7 @@ use serde::Deserialize;
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     pub database_url: String,
-    pub redis_urls: String,
+    pub redis_url: String,
     pub server: String,
     pub jwt_rsa: String,
     pub jwt_expire_seconds: u64,
@@ -27,12 +27,13 @@ fn get_config() -> Config {
     }
 }
 
-fn get_rsa(path:&str) -> RS384KeyPair {
-         let mut rsa_file = File::open(path).unwrap_or_else(|_| panic!("failed to load private key file:{}",path));
-         let mut contents = String::new();
-         rsa_file.read_to_string(&mut contents).unwrap();
-         RS384KeyPair::from_pem(contents.as_str()).expect("failed to load private key")
-    }
+fn get_rsa(path: &str) -> RS384KeyPair {
+    let mut rsa_file =
+        File::open(path).unwrap_or_else(|_| panic!("failed to load private key file:{}", path));
+    let mut contents = String::new();
+    rsa_file.read_to_string(&mut contents).unwrap();
+    RS384KeyPair::from_pem(contents.as_str()).expect("failed to load private key")
+}
 
 #[cfg(test)]
 mod tests {

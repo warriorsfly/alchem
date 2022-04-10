@@ -17,18 +17,18 @@ services:
 
 
     restart: always
-  # redis:
-  #   image: redis:alpine
-  #   container_name: redis
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/var/lib/redis/data
-  #   restart: always
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/var/lib/redis/data
+    restart: always
   # 后面要补上 flutter前端
   # application:
 volumes:
   database_data:
     driver: local
-  # redis_data:
-  #   driver: local
+  redis_data:
+    driver: local

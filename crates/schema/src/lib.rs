@@ -2,5 +2,5 @@
 extern crate diesel;
 
 pub mod repo;
-pub mod source;
 mod schema;
+pub mod source;
