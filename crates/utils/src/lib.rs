@@ -30,11 +30,8 @@ impl IntoResponse for Error {
         let (status, error_message) = match self {
             Error::BadRequest(message) => (StatusCode::BAD_REQUEST, message),
             Error::InternalServerError(message) => (StatusCode::INTERNAL_SERVER_ERROR, message),
-
             Error::NotFound(message) => (StatusCode::NOT_FOUND, message),
-
             Error::Unauthorized(message) => (StatusCode::UNAUTHORIZED, message),
-
             Error::ValidateError(message) => (StatusCode::BAD_REQUEST, message),
         };
 

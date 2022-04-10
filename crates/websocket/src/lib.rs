@@ -1,6 +1,9 @@
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, RwLock},
+};
 
-use alchem_utils::config::CONFIG;
+use alchem_utils::{claims::PrivateClaims, config::CONFIG};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -11,66 +14,42 @@ use axum::{
     Extension,
 };
 
-/// local user id
-pub type LocalUserId = usize;
-/// websocket connection id
-pub type ConnectionId = usize;
-/// room id
-pub type RoomId = usize;
-
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct IpAddr(pub String);
 
-pub struct Application {
+pub struct Daoism {
     pub redis_client: redis::Client,
+    pub rooms: RwLock<HashMap<i32, HashSet<i32>>>,
+    /// users in connected to current server
+    pub users: RwLock<HashSet<i32>>,
 }
 
-impl Application {
+impl Daoism {
     pub fn new() -> Self {
         Self {
             redis_client: redis::Client::open(CONFIG.redis_url.as_ref()).unwrap(),
+            rooms: RwLock::new(HashMap::with_capacity(1)),
+            users: RwLock::new(HashSet::with_capacity(1)),
         }
     }
 }
 
-// pub type AioConnection = redis::aio::MultiplexedConnection;
-// pub struct RedisConnection(pub AioConnection);
-
-// #[async_trait]
-// impl<B> FromRequest<B> for RedisConnection
-// where
-//     B: Send,
-// {
-//     type Rejection = Error;
-
-//     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-//         let Extension(app) = Extension::<Application>::from_request(req)
-//             .await
-//             .map_err(|e| Error::InternalServerError(e.to_string()))?;
-
-//         let conn = app
-//             .redis_client
-//             .get_multiplexed_tokio_connection()
-//             .await
-//             .map_err(|e| Error::InternalServerError(e.to_string()))?;
-
-//         Ok(Self(conn))
-//     }
-// }
-
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
-    Extension(app): Extension<Arc<Application>>,
+    Extension(app): Extension<Arc<Daoism>>,
+    claim: PrivateClaims,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
 ) -> impl IntoResponse {
     if let Some(TypedHeader(user_agent)) = user_agent {
         println!("`{}` connected", user_agent.as_str());
     }
-    let cn = app
-        .redis_client
-        .get_multiplexed_tokio_connection()
-        .await
-        .unwrap();
+    let mut users = app.users.try_write().unwrap();
+    users.insert(claim.id);
+    // let cn = app
+    //     .redis_client
+    //     .get_multiplexed_tokio_connection()
+    //     .await
+    //     .unwrap();
 
     // cn.hset("all".to_string(), "all".to_string(), "all".to_string());
 

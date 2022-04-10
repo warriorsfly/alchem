@@ -1,6 +1,6 @@
 use alchem_schema::{repo, source::User};
 use alchem_utils::{
-    claims::Armor,
+    claims::PrivateClaims,
     config::{CONFIG, KEY_PAIR},
     db::DatabaseConnection,
     validate::ValidatedJson,
@@ -68,7 +68,7 @@ pub(crate) async fn login_handler(
         entity.password.to_owned(),
     )
     .await?;
-    let armor = Armor { id: usr.id };
+    let armor = PrivateClaims { id: usr.id };
     let claims = Claims::with_custom_claims(armor, Duration::from_secs(CONFIG.jwt_expire_seconds));
     let token = KEY_PAIR
         .sign(claims)
