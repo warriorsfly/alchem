@@ -1,8 +1,7 @@
 use alchem_websocket::{ws_handler, Application};
 use axum::{
-    extract::Extension,
     routing::{get, post},
-    Router, Server,
+    Extension, Router, Server,
 };
 
 use std::{net::SocketAddr, sync::Arc};
@@ -19,10 +18,10 @@ async fn main() {
     // build our application with some routes
     let appli = Arc::new(Application::new());
     let app = Router::new()
-        .layer(Extension(appli))
         .route("/api/user/signup", post(signup_handler))
         .route("/api/user/login", post(login_handler))
-        .route("/ws", get(ws_handler));
+        .route("/ws", get(ws_handler))
+        .layer(Extension(appli));
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
