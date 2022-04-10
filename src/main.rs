@@ -1,12 +1,11 @@
-use alchem_websocket::{ws_handler, Application};
+use alchem_websocket::{ws_handler, Daoism};
 use axum::{
     routing::{get, post},
     Extension, Router, Server,
 };
 
-use std::{net::SocketAddr, sync::Arc};
-
 use crate::handlers::{login_handler, signup_handler};
+use std::{net::SocketAddr, sync::Arc};
 
 mod handlers;
 
@@ -16,12 +15,12 @@ async fn main() {
     // let config = get_config();
     // let key_pair = Config::get_rsa(&config);
     // build our application with some routes
-    let appli = Arc::new(Application::new());
+    let dim = Arc::new(Daoism::new());
     let app = Router::new()
         .route("/api/user/signup", post(signup_handler))
         .route("/api/user/login", post(login_handler))
         .route("/ws", get(ws_handler))
-        .layer(Extension(appli));
+        .layer(Extension(dim));
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
