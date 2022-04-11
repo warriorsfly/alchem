@@ -43,55 +43,12 @@ pub async fn ws_handler(
     if let Some(TypedHeader(user_agent)) = user_agent {
         println!("`{}` connected", user_agent.as_str());
     }
-    let mut users = app.users.try_write().unwrap();
-    users.insert(claim.id);
-    // let cn = app
-    //     .redis_client
-    //     .get_multiplexed_tokio_connection()
-    //     .await
-    //     .unwrap();
-
-    // cn.hset("all".to_string(), "all".to_string(), "all".to_string());
-
-    ws.on_upgrade(handle_socket)
+    let user =claim.id;
+    ws.on_upgrade(move|stream|handle_socket(stream, app, user))
 }
 
-async fn handle_socket(mut socket: WebSocket) {
-    if let Some(msg) = socket.recv().await {
-        if let Ok(msg) = msg {
-            match msg {
-                Message::Text(t) => {
-                    println!("client send str: {:?}", t);
-                }
-                Message::Binary(_) => {
-                    println!("client send binary data");
-                }
-                Message::Ping(_) => {
-                    println!("socket ping");
-                }
-                Message::Pong(_) => {
-                    println!("socket pong");
-                }
-                Message::Close(_) => {
-                    println!("client disconnected");
-                    return;
-                }
-            }
-        } else {
-            println!("client disconnected");
-            return;
-        }
-    }
+async fn handle_socket(stream: WebSocket,app:Arc<Daoism>,user:i32) {
+    let mut users = app.users.try_write().unwrap();
+    users.insert(user);
 
-    loop {
-        if socket
-            .send(Message::Text(String::from("Hi!")))
-            .await
-            .is_err()
-        {
-            println!("client disconnected");
-            return;
-        }
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-    }
 }
