@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{config::KEY_PAIR, Error};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize,)]
 pub struct PrivateClaims {
     pub id: i32,
 }
