@@ -1,3 +1,4 @@
+mod room;
 mod user;
 
-pub use user::*;
+pub use {room::*, user::*};

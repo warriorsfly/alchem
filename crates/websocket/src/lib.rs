@@ -55,7 +55,7 @@ pub async fn ws_handler(
 }
 
 async fn handle_socket(stream: WebSocket, app: Arc<WebsocketServer>, user: i32) {
-    let (sink, mut stream) = stream.split();
+    let (sink, stream) = stream.split();
     let mut users = app.users.try_write().unwrap();
     users.insert(user, sink);
 }
