@@ -1,4 +1,4 @@
-use alchem_websocket::{ws_handler, Daoism};
+use alchem_websocket::{ws_handler, WebsocketServer};
 use axum::{
     routing::{get, post},
     Extension, Router, Server,
@@ -15,7 +15,7 @@ async fn main() {
     // let config = get_config();
     // let key_pair = Config::get_rsa(&config);
     // build our application with some routes
-    let dim = Arc::new(Daoism::new());
+    let dim = Arc::new(WebsocketServer::new());
     let app = Router::new()
         .route("/api/user/signup", post(signup_handler))
         .route("/api/user/login", post(login_handler))

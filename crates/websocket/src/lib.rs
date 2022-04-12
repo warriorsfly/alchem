@@ -13,42 +13,49 @@ use axum::{
     response::IntoResponse,
     Extension,
 };
+use futures::{stream::SplitSink, StreamExt};
+use tokio::sync::broadcast;
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct IpAddr(pub String);
 
-pub struct Daoism {
-    pub redis_client: redis::Client,
-    pub rooms: RwLock<HashMap<i32, HashSet<i32>>>,
-    /// users in connected to current server
-    pub users: RwLock<HashSet<i32>>,
+pub struct Room{
+    pub name: String,
+    pub broad:broadcast::Sender<String>,
 }
 
-impl Daoism {
+pub struct WebsocketServer {
+    pub redis_client: redis::Client,
+    pub rooms: RwLock<HashMap<i32, HashSet<Room>>>,
+    /// users in connected to current server
+    pub users: RwLock<HashMap<i32, SplitSink<WebSocket, Message>>>,
+}
+
+impl WebsocketServer {
     pub fn new() -> Self {
         Self {
             redis_client: redis::Client::open(CONFIG.redis_url.as_ref()).unwrap(),
             rooms: RwLock::new(HashMap::with_capacity(1)),
-            users: RwLock::new(HashSet::with_capacity(1)),
+            users: RwLock::new(HashMap::with_capacity(1)),
         }
     }
 }
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
-    Extension(app): Extension<Arc<Daoism>>,
+    Extension(app): Extension<Arc<WebsocketServer>>,
     claim: PrivateClaims,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
 ) -> impl IntoResponse {
     if let Some(TypedHeader(user_agent)) = user_agent {
         println!("`{}` connected", user_agent.as_str());
     }
-    let user =claim.id;
-    ws.on_upgrade(move|stream|handle_socket(stream, app, user))
+    let user = claim.id;
+    ws.on_upgrade(move |stream| handle_socket(stream, app, user))
 }
 
-async fn handle_socket(stream: WebSocket,app:Arc<Daoism>,user:i32) {
+async fn handle_socket(stream: WebSocket, app: Arc<WebsocketServer>, user: i32) {
+    let (sink, mut stream) = stream.split();
     let mut users = app.users.try_write().unwrap();
-    users.insert(user);
-
+    users.insert(user, sink);
 }
