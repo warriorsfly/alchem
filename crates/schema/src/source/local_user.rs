@@ -1,7 +1,7 @@
 use crate::schema::local_users;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Queryable, Debug, Serialize, Deserialize)]
+#[derive(Clone, Queryable)]
 #[diesel(table_name =local_users)]
 pub struct LocalUser {
     pub id: i32,
@@ -12,6 +12,7 @@ pub struct LocalUser {
 }
 
 #[derive(Debug, Insertable)]
+#[diesel(belongs_to(User))]
 #[diesel(table_name = local_users)]
 pub struct NewLocalUser<'a> {
     pub user_id: &'a i32,

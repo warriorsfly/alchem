@@ -4,6 +4,7 @@ use crate::schema::room_users;
 use crate::schema::rooms;
 #[derive(Clone, Queryable, Serialize, Deserialize, Debug)]
 #[diesel(table_name = rooms)]
+#[diesel(belongs_to(User))]
 pub struct Room {
     pub id: i32,
     pub name: String,
