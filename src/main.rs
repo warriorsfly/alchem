@@ -2,13 +2,13 @@ use axum::{
     routing::{get, post},
     Extension, Router, Server,
 };
-use ws::{ws_handler, WebsocketServer};
+use server::{ws_handler, SocketServer};
 
 use crate::handlers::{login_handler, signup_handler};
 use std::{net::SocketAddr, sync::Arc};
 
 mod handlers;
-mod ws;
+mod server;
 
 #[tokio::main]
 async fn main() {
@@ -16,7 +16,7 @@ async fn main() {
     // let config = get_config();
     // let key_pair = Config::get_rsa(&config);
     // build our application with some routes
-    let dim = Arc::new(WebsocketServer::new());
+    let dim = Arc::new(SocketServer::new());
     let app = Router::new()
         .route("/api/user/signup", post(signup_handler))
         .route("/api/user/login", post(login_handler))
