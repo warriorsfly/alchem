@@ -1,13 +1,14 @@
-use alchem_websocket::{ws_handler, WebsocketServer};
 use axum::{
     routing::{get, post},
     Extension, Router, Server,
 };
+use ws::{ws_handler, WebsocketServer};
 
 use crate::handlers::{login_handler, signup_handler};
 use std::{net::SocketAddr, sync::Arc};
 
 mod handlers;
+mod ws;
 
 #[tokio::main]
 async fn main() {

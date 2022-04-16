@@ -9,15 +9,13 @@ members = [
     # "crates/bors",
     "crates/todos",
     "crates/schema",
-    "crates/utils",
-    "crates/websocket",
+    "crates/utils"
 ]
 
 [dependencies]
 
 alchem-schema = { version = "0.1.0",path = "./crates/schema"}
 alchem-utils = { version = "0.1.0",path = "./crates/utils"}
-alchem-websocket = { version = "0.1.0",path = "./crates/websocket"}
 diesel = {git = "https://github.com/weiznich/diesel", rev = "9b4179e01ee96bd585cf306f64359971ee9ece44", default-features = false, features = ["chrono", "postgres", "serde_json"]}
 axum = { version = "0.5", features = ["ws", "headers"] }
 futures = "0.3"

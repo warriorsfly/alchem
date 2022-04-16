@@ -59,6 +59,7 @@ pub(crate) async fn signup_handler(
     Ok(Json(usr))
 }
 pub(crate) async fn login_handler(
+    // Extension(app): Extension<Arc<Cl>>,
     DatabaseConnection(mut conn): DatabaseConnection,
     ValidatedJson(entity): ValidatedJson<LoginForm>,
 ) -> Result<Json<UserToken>, Error> {
@@ -68,6 +69,8 @@ pub(crate) async fn login_handler(
         entity.password.to_owned(),
     )
     .await?;
+    let user_rooms = repo::get_user_rooms(&mut conn, usr.id).await?;
+
     let armor = PrivateClaims { id: usr.id };
     let claims = Claims::with_custom_claims(armor, Duration::from_secs(CONFIG.jwt_expire_seconds));
     let token = KEY_PAIR

@@ -1,5 +1,4 @@
 use crate::schema::local_users;
-use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Queryable)]
 #[diesel(table_name =local_users)]

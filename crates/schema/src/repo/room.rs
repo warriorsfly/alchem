@@ -135,3 +135,19 @@ pub async fn delete_room_user(
 
     Ok(())
 }
+
+
+pub async fn get_user_rooms(
+    conn: &mut DieselConnection,
+    usr_id: i32,
+) -> Result<Vec<Room>, Error> {
+    use crate::schema::room_users::dsl::*;
+    use crate::schema::rooms::dsl::*;
+    let rms = rooms
+        .inner_join(room_users)
+        .filter(user_id.eq(usr_id))
+        .load::<(Room, RoomUser)>(conn)
+        .await?;
+
+    Ok(rms.into_iter().map(|(r, _)| r).collect())
+}
