@@ -20,6 +20,7 @@ diesel = {git = "https://github.com/weiznich/diesel", rev = "9b4179e01ee96bd585c
 axum = { version = "0.5", features = ["ws", "headers"] }
 futures = "0.3"
 jwt-simple = "0.10"
+redis = { version = "0.21", features = ["cluster"] }
 serde = { version = "1", features = ["derive"] }
 tokio = "1"
 tower = { version = "0.4", features = ["util"] }

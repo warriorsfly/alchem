@@ -8,7 +8,7 @@ use serde::Deserialize;
 #[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     pub database_url: String,
-    pub redis_url: String,
+    pub redis_cluster_nodes: String,
     pub server: String,
     pub jwt_rsa: String,
     pub jwt_expire_seconds: u64,
