@@ -25,6 +25,12 @@ impl From<diesel::result::Error> for Error {
     }
 }
 
+impl From<redis::RedisError> for Error {
+    fn from(e: redis::RedisError) -> Self {
+        Self::InternalServerError(e.to_string())
+    }
+}
+
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {

@@ -3,7 +3,7 @@ use alchem_utils::{
     claims::PrivateClaims,
     config::{CONFIG, KEY_PAIR},
     db::DatabaseConnection,
-    validate::ValidatedJson,
+    validate::{ValidatedJson, ValidatedForm},
     Error,
 };
 
@@ -47,7 +47,7 @@ pub struct UserToken {
 
 pub(crate) async fn signup_handler(
     DatabaseConnection(mut conn): DatabaseConnection,
-    ValidatedJson(entity): ValidatedJson<UserForm>,
+    ValidatedForm(entity): ValidatedForm<UserForm>,
 ) -> Result<Json<User>, Error> {
     let usr = repo::signup(
         &mut conn,
@@ -69,7 +69,6 @@ pub(crate) async fn login_handler(
         entity.password.to_owned(),
     )
     .await?;
-    let user_rooms = repo::get_user_rooms(&mut conn, usr.id).await?;
 
     let armor = PrivateClaims { id: usr.id };
     let claims = Claims::with_custom_claims(armor, Duration::from_secs(CONFIG.jwt_expire_seconds));

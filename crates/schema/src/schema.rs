@@ -21,6 +21,7 @@ table! {
     rooms (id) {
         id -> Int4,
         name -> Varchar,
+        ico -> Varchar,
         invite_link -> Varchar,
         owner -> Int4,
     }

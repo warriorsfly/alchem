@@ -1,9 +1,9 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
 };
 
-
+use alchem_schema::source::Room;
 use alchem_utils::{claims::PrivateClaims, config::CONFIG, Error};
 use axum::{
     extract::{
@@ -15,20 +15,17 @@ use axum::{
     Extension,
 };
 use futures::{SinkExt, StreamExt};
-use redis::Commands;
+use redis::{cluster::cluster_pipe, Commands};
 use tokio::sync::{broadcast, mpsc};
-
-pub struct Group {
-    pub name: String,
-    pub broad: broadcast::Sender<String>,
-}
 
 pub struct SocketServer {
     pub redis_cluster: redis::cluster::ClusterClient,
-    pub rooms: RwLock<HashMap<i32, Group>>,
+    pub rooms: RwLock<HashMap<i32, broadcast::Sender<String>>>,
     /// users in connected to current server
     pub users: RwLock<HashMap<i32, mpsc::Sender<String>>>,
 }
+
+const KEY_ROOM: &str = "room";
 
 impl SocketServer {
     pub fn new() -> Self {
@@ -46,17 +43,83 @@ impl SocketServer {
 impl SocketServer {
     /// get user's online info, whether local or not, if not local,
     /// go to redis hset see
-    fn is_user_socket_in_local(&self, user: i32) -> bool {
+    fn is_user_online_in_local(&self, user: i32) -> bool {
         self.users.try_read().unwrap().contains_key(&user)
     }
-    fn hset_user_room(&self, user: i32, room: i32) -> Result<(), Error> {
-        let cluster_con = self
-            .redis_cluster
-            .get_connection()
-            .map_err(|e| Error::InternalServerError(e.to_string()))?;
-        let _result = cluster_con.hset_nx(format!("user:{}", user), "rooms", room)?;
+
+    fn create_room(&self, room: Room) -> Result<(), Error> {
+        let connection = &mut self.redis_cluster.get_connection()?;
+        let _: () = cluster_pipe()
+            // create room entity in redis
+            .hset(format!("room:{}", &room.id), "owner", &room.owner).ignore()
+            .hset(format!("room:{}", &room.id), "name", &room.name).ignore()
+            // create users in room hashset
+            .hset(
+                format!("users-in-room:{}", &room.id),
+                // user id
+                &room.owner,
+                // user on which alchem server, inited at the time when it upgrade to websocket
+                "",
+            )
+            .ignore()
+            // add room id to user's rooms hashset
+            .sadd(format!("rooms-of-user:{}",&room.owner),  &room.id)
+            .ignore()
+            .query(connection)?;
+
         Ok(())
     }
+
+    fn join_room(&self, user: i32, room: i32) -> Result<(), Error> {
+        let connection = &mut self.redis_cluster.get_connection()?;
+        let _: () = cluster_pipe()
+            // create users in room hashset
+            .hset(
+                format!("users-in-room:{}", room),
+                // user id
+                user,
+                // user on which alchem server, inited at the time when it upgrade to websocket
+                "",
+            )
+            .ignore()
+            // add room id to user's rooms hashset
+            .sadd(format!("rooms-of-user:{}",user),  room)
+            .ignore()
+            .query(connection)?;
+        Ok(())
+    }
+
+    fn leave_room(&self, user: i32, room: i32) -> Result<(), Error> {
+        let connection = &mut self.redis_cluster.get_connection()?;
+        let _: () = cluster_pipe()
+            // create users in room hashset
+            .hdel(
+                format!("users-in-room:{}", room),
+                // user id
+                user
+            )
+            .ignore()
+            // add room id to user's rooms hashset
+            .srem(format!("rooms-of-user:{}",user),  room)
+            .ignore()
+            .query(connection)?;
+        Ok(())
+    }
+
+    fn get_user_rooms(&self, user: i32) -> Result<HashSet<i32>, Error> {
+        let connection = &mut self.redis_cluster.get_connection()?;
+        let rooms = connection.smembers(format!("rooms-of-user:{}", user))?;
+        Ok(rooms)
+    }
+
+    // fn hdel_user_room(&self, user: i32, room: i32) -> Result<(), Error> {
+    //     let connection =&mut self
+    //         .redis_cluster
+    //         .get_connection()
+    //         .map_err(|e| Error::InternalServerError(e.to_string()))?;
+    //     let _result = connection.hdel(format!("user:{}", user), "rooms", room)?;
+    //     Ok(())
+    // }
 
     // async fn get_user_grpc_addr(&self,user: i32)->String{
     //     self.redis_client.get_multiplexed_tokio_connection().await.unwrap().hget(

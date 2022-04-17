@@ -1,6 +1,7 @@
 CREATE TABLE rooms (
     id serial primary key,
     name varchar(128) NOT NULL unique,
+    ico varchar(256) NOT NULL default '',
     invite_link varchar(256) NOT NULL unique,
     owner int NOT NULL references users(id)
 );

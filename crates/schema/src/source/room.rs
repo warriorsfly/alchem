@@ -8,6 +8,7 @@ use crate::schema::rooms;
 pub struct Room {
     pub id: i32,
     pub name: String,
+    pub ico:String,
     pub invite_link: String,
     pub owner: i32,
 }
