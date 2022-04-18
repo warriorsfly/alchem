@@ -2,14 +2,11 @@ use axum::{
     routing::{get, post},
     Extension, Router, Server,
 };
-use server::{ws_handler, SocketServer};
 
 use crate::handlers::{login_handler, signup_handler};
+use alchem_websocket::{ws_handler, SocketServer};
 use std::{net::SocketAddr, sync::Arc};
-
 mod handlers;
-mod server;
-
 #[tokio::main]
 async fn main() {
     // tracing_subscriber::fmt::init();

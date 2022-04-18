@@ -1,10 +1,10 @@
 // mod todo;
 mod user;
-mod room;
+// mod room;
 // mod ws;
-use serde::{Deserialize, Serialize};
-pub(crate) use {user::*,room::*};
-use validator::Validate;
+// use serde::{Deserialize, Serialize};
+pub(crate) use user::*;
+// use validator::Validate;
 
 // /// Deadline setting for tasks
 // #[derive(Serialize, Deserialize, Default)]

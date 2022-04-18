@@ -15,12 +15,23 @@ pub struct RoomForm {
 }
 
 pub(crate) async fn create_room_handler(
-    Extension(sock): Extension<Arc<SocketServer>>,
+    Extension(srv): Extension<Arc<SocketServer>>,
     DatabaseConnection(mut conn): DatabaseConnection,
     private_claims: PrivateClaims,
     ValidatedForm(entity): ValidatedForm<RoomForm>,
 ) -> Result<Json<Room>, Error> {
     let room = repo::create_room(&mut conn, private_claims.id, entity.name, "".to_string()).await?;
-    
+    srv.create_room(&room)?;
     Ok(Json(room))
 }
+
+// pub(crate) async fn change_room_owner_handler(
+//     Extension(srv): Extension<Arc<SocketServer>>,
+//     DatabaseConnection(mut conn): DatabaseConnection,
+//     private_claims: PrivateClaims,
+//     ValidatedForm(entity): ValidatedForm<RoomForm>,
+// ) -> Result<Json<Room>, Error> {
+//     let room = repo::create_room(&mut conn, private_claims.id, entity.name, "".to_string()).await?;
+//     srv.create_room(&room)?;
+//     Ok(Json(room))
+// }
