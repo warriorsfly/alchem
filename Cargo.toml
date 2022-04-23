@@ -18,13 +18,15 @@ members = [
 alchem-schema = { version = "0.1.0",path = "./crates/schema"}
 alchem-utils = { version = "0.1.0",path = "./crates/utils"}
 alchem-websocket = { version = "0.1.0",path = "./crates/websocket"}
-diesel = {git = "https://github.com/weiznich/diesel", rev = "9b4179e01ee96bd585cf306f64359971ee9ece44", default-features = false, features = ["chrono", "postgres", "serde_json"]}
+diesel = {git = "https://github.com/diesel-rs/diesel", rev = "9bc6d501cea865cb239e68012eb7deeb85304514", default-features = false, features = ["chrono", "postgres", "serde_json"]}
 axum = { version = "0.5", features = ["ws", "headers"] }
 futures = "0.3"
-jwt-simple = "0.10"
+jwt-simple = "0.11"
+
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
 validator = { version = "0.14.0", features = ["derive","phone"] }
+
