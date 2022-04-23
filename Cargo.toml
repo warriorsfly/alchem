@@ -18,7 +18,7 @@ members = [
 alchem-schema = { version = "0.1.0",path = "./crates/schema"}
 alchem-utils = { version = "0.1.0",path = "./crates/utils"}
 alchem-websocket = { version = "0.1.0",path = "./crates/websocket"}
-diesel = {git = "https://github.com/diesel-rs/diesel", rev = "9bc6d501cea865cb239e68012eb7deeb85304514", default-features = false, features = ["chrono", "postgres", "serde_json"]}
+diesel = {version = "2.0.0-rc.0",  default-features = false, features = ["chrono", "postgres", "serde_json"]}
 axum = { version = "0.5", features = ["ws", "headers"] }
 futures = "0.3"
 jwt-simple = "0.11"
