@@ -1,0 +1,21 @@
+tenant: "public"
+namespace: "default"
+name: "debezium-postgres-source"
+topicName: "debezium-postgres-topic"
+archive: "connectors/pulsar-io-debezium-postgres-2.10.0.nar"
+parallelism: 1
+
+configs:
+  ## config for postgres version 10+, official docker image: postgres:<10+>
+  database.hostname: "172.17.0.2"
+  database.port: "5432"
+  database.user: "postgres"
+  database.password: "123456"
+  database.dbname: "postgres"
+  database.server.name: "dbserver1"
+  plugin.name: "pgoutput"
+  schema.whitelist: "public"
+  table.whitelist: "public.users"
+
+  ## PULSAR_SERVICE_URL_CONFIG
+  database.history.pulsar.service.url: "pulsar://127.0.0.1:6650"

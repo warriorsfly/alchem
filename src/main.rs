@@ -1,19 +1,18 @@
+use std::{net::SocketAddr, sync::Arc};
+
+use crate::handlers::{login_handler, signup_handler};
 use axum::{
     routing::{get, post},
     Extension, Router, Server,
 };
 
-use crate::handlers::{login_handler, signup_handler};
-use alchem_websocket::{ws_handler, SocketServer};
-use std::{net::SocketAddr, sync::Arc};
+use alchem_websocket::{init_socket_server, ws_handler};
+
 mod handlers;
+
 #[tokio::main]
 async fn main() {
-    // tracing_subscriber::fmt::init();
-    // let config = get_config();
-    // let key_pair = Config::get_rsa(&config);
-    // build our application with some routes
-    let dim = Arc::new(SocketServer::new());
+    let dim = Arc::new(init_socket_server().await);
     let app = Router::new()
         .route("/api/user/signup", post(signup_handler))
         .route("/api/user/login", post(login_handler))

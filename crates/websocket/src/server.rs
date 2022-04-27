@@ -6,7 +6,7 @@ use std::{
 use alchem_utils::{claims::PrivateClaims, config::CONFIG, Error};
 use axum::{
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
+        ws::{WebSocket, WebSocketUpgrade},
         TypedHeader,
     },
     headers,
@@ -14,25 +14,41 @@ use axum::{
     Extension,
 };
 use futures::{SinkExt, StreamExt};
+// use pulsar::{
+//     message::proto::command_subscribe::SubType, message::Payload, Consumer, DeserializeMessage,
+//     Pulsar, TokioExecutor, reader::Reader,
+// };
+
 use redis::{cluster::cluster_pipe, Commands};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+
+#[derive(Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub user: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room: Option<i32>,
+    pub message: String,
+}
 
 pub struct SocketServer {
     pub redis_cluster: redis::cluster::ClusterClient,
-    // pub rooms: RwLock<HashMap<i32, broadcast::Sender<String>>>,
     /// users in connected to current server
     pub users: RwLock<HashMap<i32, mpsc::Sender<String>>>,
 }
 
-impl SocketServer {
-    pub fn new() -> Self {
-        Self {
-            redis_cluster: redis::cluster::ClusterClient::open(
-                CONFIG.redis_cluster_nodes.split(",").collect(),
-            )
-            .expect("Unable to connect to redis cluster"),
-            users: RwLock::new(HashMap::with_capacity(1)),
-        }
+pub async fn init_socket_server() -> SocketServer {
+    SocketServer {
+        redis_cluster: redis::cluster::ClusterClient::open(
+            CONFIG.redis_cluster_url.split(",").collect(),
+        )
+        .expect("Unable to connect to redis cluster"),
+        // plsar: Pulsar::builder(CONFIG.ems_url.as_str(), TokioExecutor)
+        //     .build()
+        //     .await
+        //     .expect("Unable to connect to pulsar"),
+
+        users: RwLock::new(HashMap::with_capacity(1)),
     }
 }
 
@@ -42,7 +58,6 @@ impl SocketServer {
     pub fn is_user_online_in_local(&self, user: i32) -> bool {
         self.users.try_read().unwrap().contains_key(&user)
     }
-
     pub fn create_room(&self, rid: i32, rname: &str, owner: i32) -> Result<(), Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
         let _: () = cluster_pipe()
@@ -109,10 +124,6 @@ impl SocketServer {
         let rooms = connection.smembers(format!("rooms-of-user:{}", user))?;
         Ok(rooms)
     }
-
-    // pub fn ws_handler(&self, user: i32)->Result<(),Error>{
-
-    // }
 }
 
 pub async fn ws_handler(
@@ -128,20 +139,66 @@ pub async fn ws_handler(
     ws.on_upgrade(move |stream| handle_socket(stream, srv, user))
 }
 
-async fn handle_socket(stream: WebSocket, srv: Arc<SocketServer>, user: i32) {
+async fn handle_socket(stream: WebSocket, srv: Arc<SocketServer>, user: i32){
     let (mut sink, _stream) = stream.split();
-    let mut users = srv.users.try_write().unwrap();
-    let (tx, mut rx) = mpsc::channel(1);
-    users.insert(user, tx);
+    // let mut users = srv.users.try_write().unwrap();
+    // let (tx, mut rx) = mpsc::channel(1);
+    // users.insert(user, tx);
+    let rooms = srv.get_user_rooms(user).unwrap();
 
-    let _tsk = tokio::spawn(async move {
-        while let Some(msg) = rx.recv().await {
-            // In any websocket error, break loop.
-            if sink.send(Message::Text(msg)).await.is_err() {
-                break;
-            }
-        }
+       let _tsk = tokio::spawn(async move {
+    //   rooms.iter().for_each(|room|  {
+    //     let mut consumer:Reader<ChatMessage, TokioExecutor> = srv
+    //         .plsar
+    //         .reader()
+    //         .with_topic(format!("room-message-{}", room))
+    //         .with_lookup_namespace("namespace")
+    //         .with_consumer_name(format!("user-{}", user))
+    //         .with_subscription_type(SubType::Shared)
+    //         .with_subscription("room-message-subscription")
+    //         .build()
+    //         .await.unwrap();
+    //   });
     });
+    // rooms.iter().for_each(|room| async {
+    //     let mut consumer:Consumer<ChatMessage, TokioExecutor> = srv
+    //         .plsar
+    //         .consumer()
+    //         .with_topic(format!("room-message-{}", room))
+    //         .with_lookup_namespace("namespace")
+    //         .with_consumer_name(format!("user-{}", user))
+    //         .with_subscription_type(SubType::Shared)
+    //         .with_subscription("room-message-subscription")
+    //         .build()
+    //         .await.unwrap();
 
-    // let rcon = app.redis_client.get_multiplexed_tokio_connection().await.unwrap();
+    //          while let Some(msg) = consumer.try_next().await? {
+    //     consumer.ack(&msg).await?;
+    //     let data = match msg.deserialize() {
+    //         Ok(data) => data,
+    //         Err(e) => {
+    //             log::error!("could not deserialize message: {:?}", e);
+    //             break;
+    //         }
+    //     };
+
+    //     if data.data.as_str() != "data" {
+    //         log::error!("Unexpected payload: {}", &data.data);
+    //         break;
+    //     }
+    //     counter += 1;
+    //     log::info!("got {} messages", counter);
+    // }
+    // });
+
+    // let _tsk = tokio::spawn(async move {
+    //     while let Some(msg) = rx.recv().await {
+    //         // In any websocket error, break loop.
+    //         if sink.send(Message::Text(msg)).await.is_err() {
+    //             break;
+    //         }
+    //     }
+    // });
+
+    // let rcon = app.redis_redis_clusterent.get_multiplexed_tokio_connection().await.unwrap();
 }
