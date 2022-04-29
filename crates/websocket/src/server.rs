@@ -1,40 +1,112 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashSet, sync::Arc};
 
+use crate::{MessageOpration, RoomOperation};
 use alchem_utils::{claims::PrivateClaims, config::CONFIG, Error};
 use axum::{
     extract::{
-        ws::{WebSocket, WebSocketUpgrade},
+        ws::{Message, WebSocket, WebSocketUpgrade},
         TypedHeader,
     },
     headers,
     response::IntoResponse,
     Extension,
 };
+use chrono::Utc;
 use futures::{SinkExt, StreamExt};
-// use pulsar::{
-//     message::proto::command_subscribe::SubType, message::Payload, Consumer, DeserializeMessage,
-//     Pulsar, TokioExecutor, reader::Reader,
-// };
-
-use redis::{cluster::cluster_pipe, Commands};
+use redis::{
+    cluster::cluster_pipe,
+    streams::{StreamKey, StreamReadOptions, StreamReadReply},
+    Commands, FromRedisValue, ToRedisArgs,
+};
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
+
+#[derive(Serialize, Deserialize, Hash, PartialEq)]
+#[serde(tag = "type", content = "id")]
+pub enum AlcReceiver {
+    /// user who is the receiver
+    User(i32),
+    /// group of the users in it are the receivers
+    Room(i32),
+}
 
 #[derive(Serialize, Deserialize)]
-pub struct ChatMessage {
-    pub user: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub room: Option<i32>,
+pub struct AlcRawMessage {
+    /// the sender of the message
+    pub sende: i32,
+    pub recv: AlcReceiver,
     pub message: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AlcMessage {
+    /// the sender of the message
+    pub sende: i32,
+    pub recv: AlcReceiver,
+    pub message: String,
+    pub time: i64,
+}
+
+impl FromRedisValue for AlcMessage {
+    fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
+        match *v {
+            redis::Value::Data(ref val) => match serde_json::from_slice(val) {
+                Err(_) => Err(((redis::ErrorKind::TypeError, "Can't serialize value")).into()),
+                Ok(v) => Ok(v),
+            },
+            _ => Err(((
+                redis::ErrorKind::ResponseError,
+                "Response type not Dashboard compatible.",
+            ))
+                .into()),
+        }
+    }
+}
+
+impl ToRedisArgs for AlcReceiver {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite,
+    {
+        match &self {
+            Self::Room(id) => {
+                "type".write_redis_args(out);
+                "room".write_redis_args(out);
+                "id".write_redis_args(out);
+                id.write_redis_args(out);
+            }
+
+            Self::User(id) => {
+                "type".write_redis_args(out);
+                "user".write_redis_args(out);
+                "id".write_redis_args(out);
+                id.write_redis_args(out);
+            }
+        }
+    }
+}
+
+impl ToRedisArgs for AlcMessage {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite,
+    {
+        "sende".write_redis_args(out);
+        &self.sende.write_redis_args(out);
+
+        "recv".write_redis_args(out);
+        &self.recv.write_redis_args(out);
+
+        "message".write_redis_args(out);
+        &self.message.write_redis_args(out);
+
+        "time".write_redis_args(out);
+        &self.time.write_redis_args(out);
+    }
 }
 
 pub struct SocketServer {
     pub redis_cluster: redis::cluster::ClusterClient,
-    /// users in connected to current server
-    pub users: RwLock<HashMap<i32, mpsc::Sender<String>>>,
+    opts: StreamReadOptions,
 }
 
 pub async fn init_socket_server() -> SocketServer {
@@ -43,22 +115,12 @@ pub async fn init_socket_server() -> SocketServer {
             CONFIG.redis_cluster_url.split(",").collect(),
         )
         .expect("Unable to connect to redis cluster"),
-        // plsar: Pulsar::builder(CONFIG.ems_url.as_str(), TokioExecutor)
-        //     .build()
-        //     .await
-        //     .expect("Unable to connect to pulsar"),
-
-        users: RwLock::new(HashMap::with_capacity(1)),
+        opts: StreamReadOptions::default().block(5000).count(10),
     }
 }
 
-impl SocketServer {
-    /// get user's online info, whether local or not, if not local,
-    /// go to redis hset see
-    pub fn is_user_online_in_local(&self, user: i32) -> bool {
-        self.users.try_read().unwrap().contains_key(&user)
-    }
-    pub fn create_room(&self, rid: i32, rname: &str, owner: i32) -> Result<(), Error> {
+impl RoomOperation for SocketServer {
+    fn create_room(&self, rid: i32, rname: &str, owner: i32) -> Result<(), Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
         let _: () = cluster_pipe()
             // create room entity in redis
@@ -83,7 +145,7 @@ impl SocketServer {
         Ok(())
     }
 
-    pub fn join_room(&self, user: i32, room: i32) -> Result<(), Error> {
+    fn join_room(&self, user: i32, room: i32) -> Result<(), Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
         let _: () = cluster_pipe()
             // create users in room hashset
@@ -102,7 +164,7 @@ impl SocketServer {
         Ok(())
     }
 
-    pub fn leave_room(&self, user: i32, room: i32) -> Result<(), Error> {
+    fn leave_room(&self, user: i32, room: i32) -> Result<(), Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
         let _: () = cluster_pipe()
             // create users in room hashset
@@ -119,10 +181,38 @@ impl SocketServer {
         Ok(())
     }
 
-    pub fn get_user_rooms(&self, user: i32) -> Result<HashSet<i32>, Error> {
+    fn get_my_rooms(&self, user: i32) -> Result<HashSet<i32>, Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
         let rooms = connection.smembers(format!("rooms-of-user:{}", user))?;
         Ok(rooms)
+    }
+}
+
+impl MessageOpration for SocketServer {
+    fn send_message(&self, msg: AlcMessage) -> Result<(), Error> {
+        match &msg.recv {
+            AlcReceiver::Room(room) => {
+                let connection = &mut self.redis_cluster.get_connection()?;
+                let usrs: HashSet<i32> = connection.smembers(format!("users-in-room:{}", room))?;
+                for usr in usrs {
+                    let _: () = connection.xadd_map("alc-message-user", usr, &msg)?;
+                }
+            }
+            AlcReceiver::User(user_id) => {
+                let connection = &mut self.redis_cluster.get_connection()?;
+                let _: () = connection.xadd_map("alc-message-user", user_id, &msg)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn receive_message(&self, user: i32) -> Result<StreamReadReply, Error> {
+        let connection = &mut self.redis_cluster.get_connection()?;
+        let last_message_id: String =
+            connection.hget(format!("user:{}", user), "last-message-id")?;
+        let ssr =
+            connection.xread_options(&["alc-message-user"], &[&last_message_id], &self.opts)?;
+        Ok(ssr)
     }
 }
 
@@ -136,69 +226,48 @@ pub async fn ws_handler(
         println!("`{}` connected", user_agent.as_str());
     }
     let user = claim.id;
-    ws.on_upgrade(move |stream| handle_socket(stream, srv, user))
+    ws.on_upgrade(move |sock| handle_socket(sock, srv, user))
 }
 
-async fn handle_socket(stream: WebSocket, srv: Arc<SocketServer>, user: i32){
-    let (mut sink, _stream) = stream.split();
-    // let mut users = srv.users.try_write().unwrap();
-    // let (tx, mut rx) = mpsc::channel(1);
-    // users.insert(user, tx);
-    let rooms = srv.get_user_rooms(user).unwrap();
+async fn handle_socket(sock: WebSocket, srv: Arc<SocketServer>, user: i32) {
+    let (mut sink, mut stream) = sock.split();
+    // handle messages from client
+    while let Some(msg) = stream.next().await {
+        if let Ok(Message::Text(txt)) = msg {
+            let msg = serde_json::from_str(&txt);
+            if let Ok(AlcRawMessage {
+                sende,
+                recv,
+                message,
+            }) = msg
+            {
+                let msg = AlcMessage {
+                    sende,
+                    recv,
+                    message,
+                    time: Utc::now().timestamp(),
+                };
 
-       let _tsk = tokio::spawn(async move {
-    //   rooms.iter().for_each(|room|  {
-    //     let mut consumer:Reader<ChatMessage, TokioExecutor> = srv
-    //         .plsar
-    //         .reader()
-    //         .with_topic(format!("room-message-{}", room))
-    //         .with_lookup_namespace("namespace")
-    //         .with_consumer_name(format!("user-{}", user))
-    //         .with_subscription_type(SubType::Shared)
-    //         .with_subscription("room-message-subscription")
-    //         .build()
-    //         .await.unwrap();
-    //   });
-    });
-    // rooms.iter().for_each(|room| async {
-    //     let mut consumer:Consumer<ChatMessage, TokioExecutor> = srv
-    //         .plsar
-    //         .consumer()
-    //         .with_topic(format!("room-message-{}", room))
-    //         .with_lookup_namespace("namespace")
-    //         .with_consumer_name(format!("user-{}", user))
-    //         .with_subscription_type(SubType::Shared)
-    //         .with_subscription("room-message-subscription")
-    //         .build()
-    //         .await.unwrap();
+                let _ = srv.send_message(msg);
+            }
+        }
+    }
 
-    //          while let Some(msg) = consumer.try_next().await? {
-    //     consumer.ack(&msg).await?;
-    //     let data = match msg.deserialize() {
-    //         Ok(data) => data,
-    //         Err(e) => {
-    //             log::error!("could not deserialize message: {:?}", e);
-    //             break;
-    //         }
-    //     };
+    // handle messages from server
+    loop {
+        let ssr = srv.receive_message(user);
 
-    //     if data.data.as_str() != "data" {
-    //         log::error!("Unexpected payload: {}", &data.data);
-    //         break;
-    //     }
-    //     counter += 1;
-    //     log::info!("got {} messages", counter);
-    // }
-    // });
-
-    // let _tsk = tokio::spawn(async move {
-    //     while let Some(msg) = rx.recv().await {
-    //         // In any websocket error, break loop.
-    //         if sink.send(Message::Text(msg)).await.is_err() {
-    //             break;
-    //         }
-    //     }
-    // });
-
-    // let rcon = app.redis_redis_clusterent.get_multiplexed_tokio_connection().await.unwrap();
+        if let Ok(ssr) = ssr {
+            for StreamKey { key, ids } in ssr.keys {
+                let items: Vec<AlcMessage> = ids.iter().map(|t| t.get(&key).unwrap()).collect();
+                let res = serde_json::to_string(&items);
+                if let Ok(res) = res {
+                    if sink.send(Message::Text(res)).await.is_err() {
+                        println!("client disconnected");
+                        return;
+                    }
+                }
+            }
+        }
+    }
 }
