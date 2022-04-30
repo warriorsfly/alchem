@@ -15,7 +15,7 @@ use chrono::Utc;
 use futures::{SinkExt, StreamExt};
 use redis::{
     cluster::cluster_pipe,
-    streams::{StreamKey, StreamReadOptions, StreamReadReply},
+    streams::{StreamKey, StreamMaxlen, StreamReadOptions, StreamReadReply},
     Commands, FromRedisValue, ToRedisArgs,
 };
 use serde::{Deserialize, Serialize};
@@ -44,6 +44,23 @@ pub struct AlcMessage {
     pub recv: AlcReceiver,
     pub message: String,
     pub time: i64,
+}
+
+
+impl FromRedisValue for AlcReceiver {
+    fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
+        match *v {
+            redis::Value::Data(ref val) => match serde_json::from_slice(val) {
+                Err(_) => Err(((redis::ErrorKind::TypeError, "Can't serialize value")).into()),
+                Ok(v) => Ok(v),
+            },
+            _ => Err(((
+                redis::ErrorKind::ResponseError,
+                "Response type not Dashboard compatible.",
+            ))
+                .into()),
+        }
+    }
 }
 
 impl FromRedisValue for AlcMessage {
@@ -91,16 +108,16 @@ impl ToRedisArgs for AlcMessage {
         W: ?Sized + redis::RedisWrite,
     {
         "sende".write_redis_args(out);
-        &self.sende.write_redis_args(out);
+        let _ = &self.sende.write_redis_args(out);
 
         "recv".write_redis_args(out);
-        &self.recv.write_redis_args(out);
+        let _ = &self.recv.write_redis_args(out);
 
         "message".write_redis_args(out);
-        &self.message.write_redis_args(out);
+        let _ = &self.message.write_redis_args(out);
 
         "time".write_redis_args(out);
-        &self.time.write_redis_args(out);
+        let _ = &self.time.write_redis_args(out);
     }
 }
 
@@ -190,29 +207,47 @@ impl RoomOperation for SocketServer {
 
 impl MessageOpration for SocketServer {
     fn send_message(&self, msg: AlcMessage) -> Result<(), Error> {
+        let maxlen = StreamMaxlen::Approx(3000);
         match &msg.recv {
             AlcReceiver::Room(room) => {
                 let connection = &mut self.redis_cluster.get_connection()?;
                 let usrs: HashSet<i32> = connection.smembers(format!("users-in-room:{}", room))?;
                 for usr in usrs {
-                    let _: () = connection.xadd_map("alc-message-user", usr, &msg)?;
+                    let _: () =
+                        connection.xadd_maxlen_map("alc-message-user", maxlen, usr, &msg)?;
                 }
             }
             AlcReceiver::User(user_id) => {
                 let connection = &mut self.redis_cluster.get_connection()?;
-                let _: () = connection.xadd_map("alc-message-user", user_id, &msg)?;
+                let _: () =
+                    connection.xadd_maxlen_map("alc-message-user", maxlen, user_id, &msg)?;
             }
         }
         Ok(())
     }
 
-    fn receive_message(&self, user: i32) -> Result<StreamReadReply, Error> {
+    fn receive_message(&self, user: i32) -> Result<Vec<AlcMessage>, Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
         let last_message_id: String =
-            connection.hget(format!("user:{}", user), "last-message-id")?;
-        let ssr =
+            connection.hget(format!("user:{}", user), "last-message-id").unwrap_or("0-0".to_string());
+        let ssr: StreamReadReply =
             connection.xread_options(&["alc-message-user"], &[&last_message_id], &self.opts)?;
-        Ok(ssr)
+        let mut messages: Vec<AlcMessage> = Vec::new();
+        for StreamKey { key: _, ids } in ssr.keys {
+  
+            if ids.len() == 0 {
+                continue;
+            }
+            let items: Vec<AlcMessage> = ids.iter().map(|t| AlcMessage { sende: t.get("sende").unwrap(), recv: t.get("recv").unwrap(), message: t.get("message").unwrap(), time: t.get("time").unwrap() }).collect();
+            messages.extend(items);
+
+            let max_message_id = ids.last().unwrap().id.clone();
+
+            let _ = connection.hset(format!("user:{}", user), "last-message-id", max_message_id)?;
+      
+        }
+
+        Ok(messages)
     }
 }
 
@@ -255,11 +290,10 @@ async fn handle_socket(sock: WebSocket, srv: Arc<SocketServer>, user: i32) {
 
     // handle messages from server
     loop {
-        let ssr = srv.receive_message(user);
+        let messages = srv.receive_message(user);
 
-        if let Ok(ssr) = ssr {
-            for StreamKey { key, ids } in ssr.keys {
-                let items: Vec<AlcMessage> = ids.iter().map(|t| t.get(&key).unwrap()).collect();
+        if let Ok(items) = messages {
+            if items.len() > 0 {
                 let res = serde_json::to_string(&items);
                 if let Ok(res) = res {
                     if sink.send(Message::Text(res)).await.is_err() {

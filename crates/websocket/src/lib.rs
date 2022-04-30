@@ -3,7 +3,7 @@ mod server;
 use std::collections::HashSet;
 
 use alchem_utils::Error;
-use redis::{streams::StreamReadReply, RedisResult};
+
 
 pub use self::server::*;
 
@@ -16,5 +16,5 @@ trait RoomOperation {
 
 trait MessageOpration {
     fn send_message(&self, msg: AlcMessage) -> Result<(), Error>;
-    fn receive_message(&self, user: i32) -> Result<StreamReadReply, Error>;
+    fn receive_message(&self, user: i32) -> Result<Vec<AlcMessage>, Error>;
 }
