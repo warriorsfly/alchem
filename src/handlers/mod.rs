@@ -1,9 +1,9 @@
 // mod todo;
+mod room;
 mod user;
-// mod room;
 // mod ws;
 // use serde::{Deserialize, Serialize};
-pub(crate) use user::*;
+pub(crate) use {room::*, user::*};
 // use validator::Validate;
 
 // /// Deadline setting for tasks
@@ -69,7 +69,6 @@ mod test {
 
     use crate::handlers::UserToken;
 
-
     #[tokio::test]
     async fn test_signup_2000() {
         for i in 300000..300000 + 2000_i32 {
@@ -87,7 +86,8 @@ mod test {
         }
     }
 
-     async fn test_login_2000() {
+    #[tokio::test]
+    async fn test_join_room_2000() {
         use std::collections::HashMap;
         for i in 300000..300000 + 2000_i32 {
             let mut map = HashMap::new();
@@ -100,34 +100,60 @@ mod test {
                 .send()
                 .await
                 .unwrap();
-                let jwt = serde_json::from_str::<UserToken>(&res.text().await.unwrap()).unwrap();
-                
-                let req = Request::builder()
-                    .method("GET")
-                    .uri("http://127.0.0.1:3000/ws")
-                    .header("Authorization", format!("Bearer {}", jwt.token))
-                    .body(())
-                    .unwrap();
-                    
+            let jwt = serde_json::from_str::<UserToken>(&res.text().await.unwrap()).unwrap();
 
-                  let (stdin_tx, stdin_rx) = unbounded();
-                  tokio::spawn(read_stdin(stdin_tx));
+            let client = reqwest::Client::new();
+            let res = client
+                .post("http://127.0.0.1:3000/api/room/join/1")
+                .header("Authorization", format!("Bearer {}", jwt.token))
+                .send()
+                .await
+                .unwrap();
+            println!("{:?}", res.text().await.unwrap());
+        }
+    }
 
-                  let (ws_stream, _) = connect_async(req).await.expect("Failed to connect");
-                  println!("WebSocket handshake has been successfully completed");
+    #[tokio::test]
+    async fn test_ws_2000() {
+        use std::collections::HashMap;
+        for i in 300000..300000 + 2000_i32 {
+            let mut map = HashMap::new();
+            map.insert("name", i.to_string());
+            map.insert("password", "12345678".to_string());
+            let client = reqwest::Client::new();
+            let res = client
+                .post("http://127.0.0.1:3000/api/user/login")
+                .json(&map)
+                .send()
+                .await
+                .unwrap();
+            let jwt = serde_json::from_str::<UserToken>(&res.text().await.unwrap()).unwrap();
+
+            let req = Request::builder()
+                .method("GET")
+                .uri("http://127.0.0.1:3000/ws")
+                .header("Authorization", format!("Bearer {}", jwt.token))
+                .body(())
+                .unwrap();
+
+            let (stdin_tx, stdin_rx) = unbounded();
+            tokio::spawn(read_stdin(stdin_tx));
+
+            let (ws_stream, _) = connect_async(req).await.expect("Failed to connect");
+            println!("WebSocket handshake has been successfully completed");
         }
     }
 
     async fn read_stdin(tx: UnboundedSender<Message>) {
-    let mut stdin = tokio::io::stdin();
-    loop {
-        let mut buf = vec![0; 1024];
-        let n = match stdin.read(&mut buf).await {
-            Err(_) | Ok(0) => break,
-            Ok(n) => n,
-        };
-        buf.truncate(n);
-        tx.unbounded_send(Message::binary(buf)).unwrap();
+        let mut stdin = tokio::io::stdin();
+        loop {
+            let mut buf = vec![0; 1024];
+            let n = match stdin.read(&mut buf).await {
+                Err(_) | Ok(0) => break,
+                Ok(n) => n,
+            };
+            buf.truncate(n);
+            tx.unbounded_send(Message::binary(buf)).unwrap();
+        }
     }
-}
 }

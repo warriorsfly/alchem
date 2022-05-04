@@ -1,6 +1,6 @@
 use std::{collections::HashSet, sync::Arc};
 
-use crate::{MessageOpration, RoomOperation};
+use crate::{MessageOpt, RoomOpt};
 use alchem_utils::{claims::PrivateClaims, config::CONFIG, Error};
 use axum::{
     extract::{
@@ -45,7 +45,6 @@ pub struct AlcMessage {
     pub message: String,
     pub time: i64,
 }
-
 
 impl FromRedisValue for AlcReceiver {
     fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
@@ -136,7 +135,7 @@ pub async fn init_socket_server() -> SocketServer {
     }
 }
 
-impl RoomOperation for SocketServer {
+impl RoomOpt for SocketServer {
     fn create_room(&self, rid: i32, rname: &str, owner: i32) -> Result<(), Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
         let _: () = cluster_pipe()
@@ -205,7 +204,7 @@ impl RoomOperation for SocketServer {
     }
 }
 
-impl MessageOpration for SocketServer {
+impl MessageOpt for SocketServer {
     fn send_message(&self, msg: AlcMessage) -> Result<(), Error> {
         let maxlen = StreamMaxlen::Approx(3000);
         match &msg.recv {
@@ -228,23 +227,30 @@ impl MessageOpration for SocketServer {
 
     fn receive_message(&self, user: i32) -> Result<Vec<AlcMessage>, Error> {
         let connection = &mut self.redis_cluster.get_connection()?;
-        let last_message_id: String =
-            connection.hget(format!("user:{}", user), "last-message-id").unwrap_or("0-0".to_string());
+        let last_message_id: String = connection
+            .hget(format!("user:{}", user), "last-message-id")
+            .unwrap_or("0-0".to_string());
         let ssr: StreamReadReply =
             connection.xread_options(&["alc-message-user"], &[&last_message_id], &self.opts)?;
         let mut messages: Vec<AlcMessage> = Vec::new();
         for StreamKey { key: _, ids } in ssr.keys {
-  
             if ids.len() == 0 {
                 continue;
             }
-            let items: Vec<AlcMessage> = ids.iter().map(|t| AlcMessage { sende: t.get("sende").unwrap(), recv: t.get("recv").unwrap(), message: t.get("message").unwrap(), time: t.get("time").unwrap() }).collect();
+            let items: Vec<AlcMessage> = ids
+                .iter()
+                .map(|t| AlcMessage {
+                    sende: t.get("sende").unwrap(),
+                    recv: t.get("recv").unwrap(),
+                    message: t.get("message").unwrap(),
+                    time: t.get("time").unwrap(),
+                })
+                .collect();
             messages.extend(items);
 
             let max_message_id = ids.last().unwrap().id.clone();
 
             let _ = connection.hset(format!("user:{}", user), "last-message-id", max_message_id)?;
-      
         }
 
         Ok(messages)

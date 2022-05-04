@@ -7,6 +7,7 @@ use axum::{
 };
 
 use alchem_websocket::{init_socket_server, ws_handler};
+use handlers::{create_room_handler, join_room_handler};
 
 mod handlers;
 
@@ -16,6 +17,8 @@ async fn main() {
     let app = Router::new()
         .route("/api/user/signup", post(signup_handler))
         .route("/api/user/login", post(login_handler))
+        .route("/api/room", post(create_room_handler))
+        .route("/api/room/join/:room_id", post(join_room_handler))
         .route("/ws", get(ws_handler))
         .layer(Extension(sckt));
 

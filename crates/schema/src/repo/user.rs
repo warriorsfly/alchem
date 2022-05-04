@@ -1,4 +1,4 @@
-use crate::source::{LocalUser, NewLocalUser, NewUser, User};
+use crate::source::{LocalUser, NewLocalUser, NewUser, User, RoomUser, NewRoomUser};
 use alchem_utils::{
     db::DieselConnection,
     encryption::{hash_password, verify_password},
@@ -76,6 +76,39 @@ pub async fn login(
             .map_err(|e| Error::InternalServerError(e.to_string()))?;
 
             Ok(user)
+        })
+    })
+    .await
+}
+
+pub async fn join_room(
+    conn: &mut DieselConnection,
+    usr:  i32,
+    rm: i32,
+) -> Result<RoomUser, Error> {
+    use crate::schema::room_users::dsl::*;
+    conn.transaction::<_, RoomUser, Error>(|c| {
+        Box::pin(async move {
+            let existed = select(exists(room_users.filter(user_id.eq(usr)).filter(room_id.eq(rm))))
+                .get_result(c)
+                .await?;
+            if existed {
+                return Err(Error::BadRequest("user is in the room already".to_string()));
+            }
+            let new_room_user = NewRoomUser {
+                room_id: &rm,
+                user_id: &usr,
+                is_admin: &false,
+            };
+
+            let rusr = insert_into(room_users)
+                .values(&new_room_user)
+                .get_result::<RoomUser>(c)
+                .await?;
+
+          
+
+            Ok(rusr)
         })
     })
     .await
