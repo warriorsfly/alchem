@@ -14,7 +14,7 @@ use axum::{
 use chrono::Utc;
 use futures::{SinkExt, StreamExt};
 use redis::{
-    cluster::cluster_pipe,
+    pipe,
     streams::{StreamKey, StreamMaxlen, StreamReadOptions, StreamReadReply},
     Commands, FromRedisValue, ToRedisArgs,
 };
@@ -121,36 +121,33 @@ impl ToRedisArgs for AlcMessage {
 }
 
 pub struct SocketServer {
-    pub redis_cluster: redis::cluster::ClusterClient,
+    pub redis_client: redis::Client,
     opts: StreamReadOptions,
 }
 
 pub async fn init_socket_server() -> SocketServer {
     SocketServer {
-        redis_cluster: redis::cluster::ClusterClient::open(
-            CONFIG.redis_cluster_url.split(",").collect(),
-        )
-        .expect("Unable to connect to redis cluster"),
+        redis_client: redis::Client::open(CONFIG.redis_url.as_str())
+            .expect("Unable to connect to redis cluster"),
         opts: StreamReadOptions::default().block(5000).count(10),
     }
 }
 
 impl RoomOpt for SocketServer {
     fn create_room(&self, rid: i32, rname: &str, owner: i32) -> Result<(), Error> {
-        let connection = &mut self.redis_cluster.get_connection()?;
-        let _: () = cluster_pipe()
+        let connection = &mut self.redis_client.get_connection()?;
+        let _: () = pipe()
             // create room entity in redis
             .hset(format!("room:{}", rid), "owner", owner)
             .ignore()
             .hset(format!("room:{}", rid), "name", rname)
             .ignore()
             // create users in room hashset
-            .hset(
+            .sadd(
                 format!("users-in-room:{}", rid),
                 // user id
                 owner,
                 // user on which alchem server, inited at the time when it upgrade to websocket
-                "",
             )
             .ignore()
             // add room id to user's rooms hashset
@@ -162,15 +159,13 @@ impl RoomOpt for SocketServer {
     }
 
     fn join_room(&self, user: i32, room: i32) -> Result<(), Error> {
-        let connection = &mut self.redis_cluster.get_connection()?;
-        let _: () = cluster_pipe()
+        let connection = &mut self.redis_client.get_connection()?;
+        let _: () = pipe()
             // create users in room hashset
-            .hset(
+            .sadd(
                 format!("users-in-room:{}", room),
                 // user id
                 user,
-                // user on which alchem server, the value changed when user's websocket online
-                "",
             )
             .ignore()
             // add room id to user's rooms hashset
@@ -181,10 +176,10 @@ impl RoomOpt for SocketServer {
     }
 
     fn leave_room(&self, user: i32, room: i32) -> Result<(), Error> {
-        let connection = &mut self.redis_cluster.get_connection()?;
-        let _: () = cluster_pipe()
+        let connection = &mut self.redis_client.get_connection()?;
+        let _: () = pipe()
             // create users in room hashset
-            .hdel(
+            .srem(
                 format!("users-in-room:{}", room),
                 // user id
                 user,
@@ -198,7 +193,7 @@ impl RoomOpt for SocketServer {
     }
 
     fn get_my_rooms(&self, user: i32) -> Result<HashSet<i32>, Error> {
-        let connection = &mut self.redis_cluster.get_connection()?;
+        let connection = &mut self.redis_client.get_connection()?;
         let rooms = connection.smembers(format!("rooms-of-user:{}", user))?;
         Ok(rooms)
     }
@@ -209,7 +204,7 @@ impl MessageOpt for SocketServer {
         let maxlen = StreamMaxlen::Approx(3000);
         match &msg.recv {
             AlcReceiver::Room(room) => {
-                let connection = &mut self.redis_cluster.get_connection()?;
+                let connection = &mut self.redis_client.get_connection()?;
                 let usrs: HashSet<i32> = connection.smembers(format!("users-in-room:{}", room))?;
                 for usr in usrs {
                     let _: () =
@@ -217,7 +212,7 @@ impl MessageOpt for SocketServer {
                 }
             }
             AlcReceiver::User(user_id) => {
-                let connection = &mut self.redis_cluster.get_connection()?;
+                let connection = &mut self.redis_client.get_connection()?;
                 let _: () =
                     connection.xadd_maxlen_map("alc-message-user", maxlen, user_id, &msg)?;
             }
@@ -226,7 +221,7 @@ impl MessageOpt for SocketServer {
     }
 
     fn receive_message(&self, user: i32) -> Result<Vec<AlcMessage>, Error> {
-        let connection = &mut self.redis_cluster.get_connection()?;
+        let connection = &mut self.redis_client.get_connection()?;
         let last_message_id: String = connection
             .hget(format!("user:{}", user), "last-message-id")
             .unwrap_or("0-0".to_string());

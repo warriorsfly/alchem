@@ -21,7 +21,7 @@ lettre = "0.10.0-rc.6"
 openssl = "0.10"
 percent-encoding = "2"
 rand = "0.8"
-redis = { version = "0.21", features = ["cluster"] }
+redis = "0.21" 
 ring = "0.17.0-alpha.11"
 serde = { version = "1", features = ["derive"] }
 thiserror = "1"

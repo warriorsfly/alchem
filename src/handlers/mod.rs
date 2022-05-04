@@ -86,7 +86,7 @@ mod test {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
     async fn test_join_room_2000() {
         use std::collections::HashMap;
         for i in 300000..300000 + 2000_i32 {
