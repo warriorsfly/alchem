@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3.9"
 services:
   db:
     image: postgres:alpine
@@ -20,17 +20,17 @@ services:
     volumes:
       - redis_data:/var/lib/redis/data
     restart: always
-  pulsar:
-    image: apachepulsar/pulsar
-    container_name: pulsar
-    ports:
-      - 8080:8080
-      - 6650:6650
-    environment:
-      PULSAR_MEM: " -Xms512m -Xmx512m -XX:MaxDirectMemorySize=1g"
-      DB_URL: db:5432
-    command: bin/pulsar standalone
-    restart: always
+  # pulsar:
+  #   image: apachepulsar/pulsar
+  #   container_name: pulsar
+  #   ports:
+  #     - 8080:8080
+  #     - 6650:6650
+  #   environment:
+  #     PULSAR_MEM: " -Xms512m -Xmx512m -XX:MaxDirectMemorySize=1g"
+  #     DB_URL: db:5432
+  #   command: bin/pulsar standalone
+  #   restart: always
   # 后面要补上 flutter前端
   # application:
 volumes:

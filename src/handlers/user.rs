@@ -3,7 +3,7 @@ use alchem_utils::{
     claims::PrivateClaims,
     config::{CONFIG, KEY_PAIR},
     db::DatabaseConnection,
-    validate::{ValidatedJson, ValidatedForm},
+    validate::{ValidatedForm, ValidatedJson},
     Error,
 };
 
@@ -15,8 +15,8 @@ use validator::Validate;
 #[derive(Debug, Deserialize, Validate)]
 pub struct UserForm {
     pub name: String,
-    #[validate(phone(message = "phone must be a valid phone number"))]
-    pub phone: String,
+    // #[validate(phone(message = "phone must be a valid phone number"))]
+    // pub phone: String,
     #[validate(length(min = 4))]
     pub password: String,
     pub bio: Option<String>,
@@ -39,7 +39,7 @@ pub struct LoginForm {
     pub password: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserToken {
     pub token: String,
     pub account: User,

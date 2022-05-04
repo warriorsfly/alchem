@@ -59,3 +59,75 @@ pub(crate) use user::*;
 //     /// Link to the source platform details page of the todo association
 //     href: Option<Href>,
 // }
+
+#[cfg(test)]
+mod test {
+    use axum::http::Request;
+    use futures::channel::mpsc::{unbounded, UnboundedSender};
+    use tokio::io::AsyncReadExt;
+    use tokio_tungstenite::{connect_async, tungstenite::Message};
+
+    use crate::handlers::UserToken;
+
+
+    #[tokio::test]
+    async fn test_signup_2000() {
+        for i in 300000..300000 + 2000_i32 {
+            let name = i.to_string();
+            let params = [("name", name), ("password", "12345678".to_string())];
+
+            let client = reqwest::Client::new();
+            let res = client
+                .post("http://127.0.0.1:3000/api/user/signup")
+                .form(&params)
+                .send()
+                .await
+                .unwrap();
+            println!("{:?}", res.text().await.unwrap());
+        }
+    }
+
+     async fn test_login_2000() {
+        use std::collections::HashMap;
+        for i in 300000..300000 + 2000_i32 {
+            let mut map = HashMap::new();
+            map.insert("name", i.to_string());
+            map.insert("password", "12345678".to_string());
+            let client = reqwest::Client::new();
+            let res = client
+                .post("http://127.0.0.1:3000/api/user/login")
+                .json(&map)
+                .send()
+                .await
+                .unwrap();
+                let jwt = serde_json::from_str::<UserToken>(&res.text().await.unwrap()).unwrap();
+                
+                let req = Request::builder()
+                    .method("GET")
+                    .uri("http://127.0.0.1:3000/ws")
+                    .header("Authorization", format!("Bearer {}", jwt.token))
+                    .body(())
+                    .unwrap();
+                    
+
+                  let (stdin_tx, stdin_rx) = unbounded();
+                  tokio::spawn(read_stdin(stdin_tx));
+
+                  let (ws_stream, _) = connect_async(req).await.expect("Failed to connect");
+                  println!("WebSocket handshake has been successfully completed");
+        }
+    }
+
+    async fn read_stdin(tx: UnboundedSender<Message>) {
+    let mut stdin = tokio::io::stdin();
+    loop {
+        let mut buf = vec![0; 1024];
+        let n = match stdin.read(&mut buf).await {
+            Err(_) | Ok(0) => break,
+            Ok(n) => n,
+        };
+        buf.truncate(n);
+        tx.unbounded_send(Message::binary(buf)).unwrap();
+    }
+}
+}
