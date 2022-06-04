@@ -1,5 +1,9 @@
-use actix_web::web::{Query, Json};
+
+use std::sync::mpsc;
+
 use serde::Deserialize;
+
+
 
 
 async fn get_reminders(todo_id:Query<String>){}
@@ -8,4 +12,6 @@ pub struct RelativeFireMinute{
     relative_fire_minute:i32,
 }
 async fn add_reminder(todo_id:Query<String>, min:Json<RelativeFireMinute>){}
-async fn delete_reminder(todo_id:Query<String>){}
+async fn delete_reminder(todo_id:Query<String>){
+    mpsc::channel(1).await;
+}

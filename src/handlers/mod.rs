@@ -1,6 +1,7 @@
 // mod todo;
 mod room;
 mod user;
+// pub mod remind;
 // mod ws;
 // use serde::{Deserialize, Serialize};
 pub(crate) use {room::*, user::*};
@@ -62,98 +63,79 @@ pub(crate) use {room::*, user::*};
 
 #[cfg(test)]
 mod test {
-    use axum::http::Request;
-    use futures::channel::mpsc::{unbounded, UnboundedSender};
-    use tokio::io::AsyncReadExt;
-    use tokio_tungstenite::{connect_async, tungstenite::Message};
 
-    use crate::handlers::UserToken;
 
-    #[tokio::test]
-    async fn test_signup_2000() {
-        for i in 300000..300000 + 2000_i32 {
-            let name = i.to_string();
-            let params = [("name", name), ("password", "12345678".to_string())];
+    // #[tokio::test]
+    // async fn test_signup_2000() {
+    //     for i in 300000..300000 + 2000_i32 {
+    //         let name = i.to_string();
+    //         let params = [("name", name), ("password", "12345678".to_string())];
 
-            let client = reqwest::Client::new();
-            let res = client
-                .post("http://127.0.0.1:3000/api/user/signup")
-                .form(&params)
-                .send()
-                .await
-                .unwrap();
-            println!("{:?}", res.text().await.unwrap());
-        }
-    }
+    //         let client = reqwest::Client::new();
+    //         let res = client
+    //             .post("http://127.0.0.1:3000/api/user/signup")
+    //             .form(&params)
+    //             .send()
+    //             .await
+    //             .unwrap();
+    //         println!("{:?}", res.text().await.unwrap());
+    //     }
+    // }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
-    async fn test_join_room_2000() {
-        use std::collections::HashMap;
-        for i in 300000..300000 + 2000_i32 {
-            let mut map = HashMap::new();
-            map.insert("name", i.to_string());
-            map.insert("password", "12345678".to_string());
-            let client = reqwest::Client::new();
-            let res = client
-                .post("http://127.0.0.1:3000/api/user/login")
-                .json(&map)
-                .send()
-                .await
-                .unwrap();
-            let jwt = serde_json::from_str::<UserToken>(&res.text().await.unwrap()).unwrap();
+    // #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+    // async fn test_join_room_2000() {
+    //     use std::collections::HashMap;
+    //     for i in 300000..300000 + 2000_i32 {
+    //         let mut map = HashMap::new();
+    //         map.insert("name", i.to_string());
+    //         map.insert("password", "12345678".to_string());
+    //         let client = reqwest::Client::new();
+    //         let res = client
+    //             .post("http://127.0.0.1:3000/api/user/login")
+    //             .json(&map)
+    //             .send()
+    //             .await
+    //             .unwrap();
+    //         let jwt = serde_json::from_str::<UserToken>(&res.text().await.unwrap()).unwrap();
 
-            let client = reqwest::Client::new();
-            let res = client
-                .post("http://127.0.0.1:3000/api/room/join/1")
-                .header("Authorization", format!("Bearer {}", jwt.token))
-                .send()
-                .await
-                .unwrap();
-            println!("{:?}", res.text().await.unwrap());
-        }
-    }
+    //         let client = reqwest::Client::new();
+    //         let res = client
+    //             .post("http://127.0.0.1:3000/api/room/join/1")
+    //             .header("Authorization", format!("Bearer {}", jwt.token))
+    //             .send()
+    //             .await
+    //             .unwrap();
+    //         println!("{:?}", res.text().await.unwrap());
+    //     }
+    // }
 
-    #[tokio::test]
-    async fn test_ws_2000() {
-        use std::collections::HashMap;
-        for i in 300000..300000 + 2000_i32 {
-            let mut map = HashMap::new();
-            map.insert("name", i.to_string());
-            map.insert("password", "12345678".to_string());
-            let client = reqwest::Client::new();
-            let res = client
-                .post("http://127.0.0.1:3000/api/user/login")
-                .json(&map)
-                .send()
-                .await
-                .unwrap();
-            let jwt = serde_json::from_str::<UserToken>(&res.text().await.unwrap()).unwrap();
+    // #[tokio::test]
+    // async fn test_ws_2000() {
+    //     for i in 300000..300000 + 2000_i32 {
+    //         let client = awc::Client::default();
+    //         let request = serde_json::json!({
+    //             "name":  i.to_string(),
+    //             "password": "12345678".to_string()
+    //         });
 
-            let req = Request::builder()
-                .method("GET")
-                .uri("http://127.0.0.1:3000/ws")
-                .header("Authorization", format!("Bearer {}", jwt.token))
-                .body(())
-                .unwrap();
+    //         let mut token = client
+    //             .post("http://127.0.0.1:3000/api/user/login")
+    //             .send_json(&request)
+    //             .await
+    //             .unwrap();
 
-            let (stdin_tx, stdin_rx) = unbounded();
-            tokio::spawn(read_stdin(stdin_tx));
+    //         let toke: UserToken = token.json().await.unwrap();
 
-            let (ws_stream, _) = connect_async(req).await.expect("Failed to connect");
-            println!("WebSocket handshake has been successfully completed");
-        }
-    }
-
-    async fn read_stdin(tx: UnboundedSender<Message>) {
-        let mut stdin = tokio::io::stdin();
-        loop {
-            let mut buf = vec![0; 1024];
-            let n = match stdin.read(&mut buf).await {
-                Err(_) | Ok(0) => break,
-                Ok(n) => n,
-            };
-            buf.truncate(n);
-            tx.unbounded_send(Message::binary(buf)).unwrap();
-        }
-    }
+    //         let (_resp, mut connection) = awc::Client::new()
+    //             .ws("http://127.0.0.1:3000/ws")
+    //             .set_header("Authorization", format!("Bearer {}", toke.token))
+    //             .connect()
+    //             .await
+    //             .unwrap();
+    //         connection
+    //             .send(awc::ws::Message::Text("Echo".into()))
+    //             .await
+    //             .unwrap();
+    //     }
+    // }
 }
