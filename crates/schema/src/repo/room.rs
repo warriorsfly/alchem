@@ -2,6 +2,7 @@ use crate::source::{NewRoom, NewRoomUser, Room, RoomUser};
 use alchem_utils::{db::DieselConnection, Error};
 use diesel::{dsl::*, prelude::*};
 use diesel_async::{AsyncConnection, RunQueryDsl};
+use futures::FutureExt;
 
 /// TODO: how to create the link?
 pub async fn create_room(
@@ -12,9 +13,8 @@ pub async fn create_room(
 ) -> Result<Room, Error> {
     use crate::schema::room_users::dsl::*;
     use crate::schema::rooms::dsl::*;
-    conn.transaction::<_, Room, Error>(|c| {
-        Box::pin(async move {
-            let new_room = NewRoom {
+    conn.transaction::<Room, Error,_>(|c| async move{
+      let new_room = NewRoom {
                 name: &room_name.as_str(),
                 invite_link: &link.as_str(),
                 owner: &usr_id,
@@ -35,8 +35,7 @@ pub async fn create_room(
                 .await?;
 
             Ok(room)
-        })
-    })
+    }.boxed())
     .await
 }
 
@@ -46,15 +45,13 @@ pub async fn delete_room(
     room_id: i32,
 ) -> Result<(), Error> {
     use crate::schema::rooms::dsl::*;
-    conn.transaction::<_, (), Error>(|c| {
-        Box::pin(async move {
-            delete(rooms.filter(id.eq(room_id)).filter(owner.eq(usr_id)))
+    conn.transaction::< (), Error,_>(|c| async move{
+        delete(rooms.filter(id.eq(room_id)).filter(owner.eq(usr_id)))
                 .execute(c)
                 .await?;
 
             Ok(())
-        })
-    })
+    }.boxed())
     .await
 }
 
@@ -100,9 +97,8 @@ pub async fn insert_room_user(
     usr_id: i32,
 ) -> Result<RoomUser, Error> {
     use crate::schema::room_users::dsl::*;
-    conn.transaction::<_, RoomUser, Error>(|c| {
-        Box::pin(async move {
-            let new_room_user = NewRoomUser {
+    conn.transaction::<RoomUser, Error,_>(|c| async move{
+      let new_room_user = NewRoomUser {
                 room_id: &rm_id,
                 user_id: &usr_id,
                 is_admin: &false,
@@ -113,8 +109,7 @@ pub async fn insert_room_user(
                 .await?;
 
             Ok(room_user)
-        })
-    })
+    }.boxed())
     .await
 }
 

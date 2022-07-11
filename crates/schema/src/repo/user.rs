@@ -6,6 +6,7 @@ use alchem_utils::{
 };
 use diesel::{dsl::*, prelude::*};
 use diesel_async::{AsyncConnection, RunQueryDsl};
+use futures::FutureExt;
 
 pub async fn signup(
     conn: &mut DieselConnection,
@@ -14,9 +15,8 @@ pub async fn signup(
 ) -> Result<User, Error> {
     use crate::schema::local_users::dsl::*;
     use crate::schema::users::dsl::*;
-    conn.transaction::<_, User, Error>(|c| {
-        Box::pin(async move {
-            let existed = select(exists(users.filter(name.eq(&username))))
+    conn.transaction::<User, Error,_>(|c|async move {
+        let existed = select(exists(users.filter(name.eq(&username))))
                 .get_result(c)
                 .await?;
             if existed {
@@ -47,8 +47,7 @@ pub async fn signup(
                 .await?;
 
             Ok(user)
-        })
-    })
+    }.boxed())
     .await
 }
 
@@ -59,9 +58,8 @@ pub async fn login(
 ) -> Result<User, Error> {
     use crate::schema::local_users::dsl::*;
     use crate::schema::users::dsl::*;
-    conn.transaction::<_, User, Error>(|c| {
-        Box::pin(async move {
-            let user: User = users.filter(name.eq(username)).get_result(c).await?;
+    conn.transaction::<User, Error,_>(|c| async move{
+        let user: User = users.filter(name.eq(username)).get_result(c).await?;
 
             let local_user: LocalUser = local_users
                 .filter(user_id.eq(&user.id))
@@ -76,8 +74,7 @@ pub async fn login(
             .map_err(|e| Error::InternalServerError(e.to_string()))?;
 
             Ok(user)
-        })
-    })
+    }.boxed())
     .await
 }
 
@@ -87,9 +84,8 @@ pub async fn join_room(
     rm: i32,
 ) -> Result<RoomUser, Error> {
     use crate::schema::room_users::dsl::*;
-    conn.transaction::<_, RoomUser, Error>(|c| {
-        Box::pin(async move {
-            let existed = select(exists(room_users.filter(user_id.eq(usr)).filter(room_id.eq(rm))))
+    conn.transaction::<RoomUser, Error,_>(|c| async move{
+        let existed = select(exists(room_users.filter(user_id.eq(usr)).filter(room_id.eq(rm))))
                 .get_result(c)
                 .await?;
             if existed {
@@ -109,8 +105,7 @@ pub async fn join_room(
           
 
             Ok(rusr)
-        })
-    })
+    }.boxed())
     .await
 }
 

@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 alchem-utils = { version = "0.1", path = "../utils" }
 chrono = { version = "0.4", features = ["serde"] }
-diesel = {version = "2.0.0-rc.0",  default-features = false, features = ["chrono", "postgres", "serde_json"]}
+diesel = {version = "2.0.0-rc.0",  default-features = false, features = ["i-implement-a-third-party-backend-and-opt-into-breaking-changes", "chrono", "postgres", "serde_json"]}
 diesel-async = {git = "https://github.com/weiznich/diesel_async", default-features = false, features = ["postgres"]}
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }
