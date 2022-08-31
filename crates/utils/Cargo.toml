@@ -10,7 +10,7 @@ axum = { version = "0.5", features = ["ws", "headers"] }
 http-body = "0.4.5"
 chrono = { version = "0.4", features = ["serde"] }
 data-encoding = "2"
-diesel = {version = "2.0.0-rc.0",  default-features = false, features = ["i-implement-a-third-party-backend-and-opt-into-breaking-changes", "chrono", "postgres", "serde_json"]}
+diesel = {version = "2",  default-features = false, features = ["i-implement-a-third-party-backend-and-opt-into-breaking-changes", "chrono", "postgres", "serde_json"]}
 diesel-async = {git = "https://github.com/weiznich/diesel_async", default-features = false, features = ["postgres"]}
 dotenvy="0.15"
 envy = "0.4"
@@ -29,4 +29,4 @@ tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
-validator = { version = "0.15.0", features = ["derive","phone"] }
+validator = { version = "0.16", features = ["derive","phone"] }

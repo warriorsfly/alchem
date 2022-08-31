@@ -1,7 +1,6 @@
 use axum::{
-    async_trait,
     extract::{Form, FromRequest, RequestParts},
-    BoxError, Json,
+    BoxError, Json, async_trait,
 };
 use serde::de::DeserializeOwned;
 use validator::Validate;
