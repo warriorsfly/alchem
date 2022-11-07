@@ -16,7 +16,7 @@ members = [
 [dependencies]
 
 alchem-schema = { version = "0.1.0",path = "./crates/schema"}
-alchem-utils = { version = "0.1.0",path = "./crates/utils"}
+alw-utils = { version = "0.1.0",path = "./crates/utils"}
 alchem-websocket = { version = "0.1.0",path = "./crates/websocket"}
 diesel = {version = "2",  default-features = false, features = ["chrono", "postgres", "serde_json"]}
 axum = { version = "0.5", features = ["ws", "headers"] }
