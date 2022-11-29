@@ -1,7 +1,7 @@
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{MessageOpt, RoomOpt};
-use alchem_utils::{claims::PrivateClaims, config::CONFIG, Error};
+use alw_utils::{claims::PrivateClaims, config::CONFIG, Error};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},

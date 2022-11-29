@@ -1,5 +1,5 @@
 use alchem_schema::{repo, source::User};
-use alchem_utils::{
+use alw_utils::{
     claims::PrivateClaims,
     config::{CONFIG, KEY_PAIR},
     db::DatabaseConnection,

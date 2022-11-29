@@ -1,5 +1,5 @@
-use crate::source::{LocalUser, NewLocalUser, NewUser, User, RoomUser, NewRoomUser};
-use alchem_utils::{
+use crate::source::{LocalUser, NewLocalUser, NewRoomUser, NewUser, RoomUser, User};
+use alw_utils::{
     db::DieselConnection,
     encryption::{hash_password, verify_password},
     Error,
@@ -15,8 +15,9 @@ pub async fn signup(
 ) -> Result<User, Error> {
     use crate::schema::local_users::dsl::*;
     use crate::schema::users::dsl::*;
-    conn.transaction::<User, Error,_>(|c|async move {
-        let existed = select(exists(users.filter(name.eq(&username))))
+    conn.transaction::<User, Error, _>(|c| {
+        async move {
+            let existed = select(exists(users.filter(name.eq(&username))))
                 .get_result(c)
                 .await?;
             if existed {
@@ -47,7 +48,9 @@ pub async fn signup(
                 .await?;
 
             Ok(user)
-    }.boxed())
+        }
+        .boxed()
+    })
     .await
 }
 
@@ -58,8 +61,9 @@ pub async fn login(
 ) -> Result<User, Error> {
     use crate::schema::local_users::dsl::*;
     use crate::schema::users::dsl::*;
-    conn.transaction::<User, Error,_>(|c| async move{
-        let user: User = users.filter(name.eq(username)).get_result(c).await?;
+    conn.transaction::<User, Error, _>(|c| {
+        async move {
+            let user: User = users.filter(name.eq(username)).get_result(c).await?;
 
             let local_user: LocalUser = local_users
                 .filter(user_id.eq(&user.id))
@@ -74,20 +78,21 @@ pub async fn login(
             .map_err(|e| Error::InternalServerError(e.to_string()))?;
 
             Ok(user)
-    }.boxed())
+        }
+        .boxed()
+    })
     .await
 }
 
-pub async fn join_room(
-    conn: &mut DieselConnection,
-    usr:  i32,
-    rm: i32,
-) -> Result<RoomUser, Error> {
+pub async fn join_room(conn: &mut DieselConnection, usr: i32, rm: i32) -> Result<RoomUser, Error> {
     use crate::schema::room_users::dsl::*;
-    conn.transaction::<RoomUser, Error,_>(|c| async move{
-        let existed = select(exists(room_users.filter(user_id.eq(usr)).filter(room_id.eq(rm))))
-                .get_result(c)
-                .await?;
+    conn.transaction::<RoomUser, Error, _>(|c| {
+        async move {
+            let existed = select(exists(
+                room_users.filter(user_id.eq(usr)).filter(room_id.eq(rm)),
+            ))
+            .get_result(c)
+            .await?;
             if existed {
                 return Err(Error::BadRequest("user is in the room already".to_string()));
             }
@@ -102,17 +107,17 @@ pub async fn join_room(
                 .get_result::<RoomUser>(c)
                 .await?;
 
-          
-
             Ok(rusr)
-    }.boxed())
+        }
+        .boxed()
+    })
     .await
 }
 
 // #[cfg(test)]
 // mod test {
 
-//     use alchem_utils::db::get_connection;
+//     use alw_utils::db::get_connection;
 
 //     use super::*;
 
